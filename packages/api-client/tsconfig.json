@@ -1,0 +1,12 @@
+{
+  "extends": "@olum-video/tsconfig/library.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "src",
+    // This package reads import.meta.env (VITE_API_MODE) and uses browser APIs
+    // — crypto.subtle, IndexedDB, fetch — so it needs Vite's client types even
+    // though it is a library rather than an app.
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

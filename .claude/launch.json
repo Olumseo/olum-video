@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "client-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "@olum-video/client-web"],
+      "port": 5200,
+      "url": "http://localhost:5200"
+    },
+    {
+      "name": "staff-portal",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "@olum-video/staff-portal"],
+      "port": 5201,
+      "url": "http://localhost:5201"
+    },
+    {
+      "name": "site-page",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "@olum-video/site-page"],
+      "port": 5202,
+      "url": "http://localhost:5202"
+    }
+  ]
+}

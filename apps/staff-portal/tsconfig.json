@@ -1,0 +1,4 @@
+{
+  "extends": "@olum-video/tsconfig/react-app.json",
+  "include": ["src", "vite.config.ts"]
+}

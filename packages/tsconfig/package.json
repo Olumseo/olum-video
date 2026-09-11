@@ -1,0 +1,6 @@
+{
+  "name": "@olum-video/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["react-app.json", "library.json"]
+}

@@ -1,0 +1,230 @@
+// Fixture data for development. Replaced by real API calls once the Go service
+// has endpoints; nothing outside src/mock/ imports this file.
+
+import type { Account, Entitlement, StaffClient, Ticket, Video } from "../types";
+
+const now = Date.now();
+const ago = (mins: number) => new Date(now - mins * 60_000).toISOString();
+
+export const account: Account = {
+  id: "cl_01",
+  name: "Priya Raghavan",
+  email: "priya@northwind.co",
+  timezone: "Asia/Kolkata",
+  avatars: [{ id: "av_01", name: "Priya — studio", status: "ready" }],
+  voices: [{ id: "vc_01", name: "Priya — natural", status: "ready" }],
+};
+
+export const entitlement: Entitlement = {
+  product: "ultimate",
+  active: true,
+  daily_video_limit: 1,
+  videos_used_today: 1,
+  resets_at: new Date(new Date().setHours(24, 0, 0, 0)).toISOString(),
+};
+
+export const videos: Video[] = [
+  {
+    id: "vid_04",
+    title: "Q3 product update",
+    status: "client_review",
+    regen_limit: 2,
+    regens_used: 0,
+    created_at: ago(180),
+    updated_at: ago(24),
+    script: {
+      id: "sc_04",
+      prompt: "A warm 60-second update on what shipped in Q3, aimed at existing customers.",
+      body: "Hi, I'm Priya. This quarter we shipped three things I think you'll care about…",
+      status: "approved",
+      created_at: ago(175),
+    },
+    versions: [
+      {
+        id: "vv_04b",
+        video_id: "vid_04",
+        version_no: 2,
+        source: "editor",
+        trigger: "internal_fix",
+        billable: false,
+        status: "client_review",
+        asset_url: "https://example.invalid/vid_04_v2.mp4",
+        duration_ms: 61_000,
+        created_at: ago(24),
+      },
+      {
+        id: "vv_04a",
+        video_id: "vid_04",
+        version_no: 1,
+        source: "heygen",
+        trigger: "initial",
+        billable: false,
+        status: "gen_done",
+        asset_url: "https://example.invalid/vid_04_v1.mp4",
+        duration_ms: 64_000,
+        created_at: ago(120),
+      },
+    ],
+    notes: [
+      {
+        id: "rn_01",
+        video_version_id: "vv_04a",
+        author_type: "staff",
+        author_name: "Arun (editor)",
+        body: "Trimmed a long pause at 0:12 and tightened the close.",
+        created_at: ago(26),
+      },
+    ],
+  },
+  {
+    id: "vid_03",
+    title: "Welcome message for new signups",
+    status: "gen_running",
+    regen_limit: 2,
+    regens_used: 0,
+    created_at: ago(95),
+    updated_at: ago(40),
+    script: {
+      id: "sc_03",
+      prompt: "Short friendly welcome for people who just created an account.",
+      body: "Welcome aboard — here's how to get your first result in about five minutes…",
+      status: "approved",
+      created_at: ago(90),
+    },
+    versions: [],
+    notes: [],
+  },
+  {
+    id: "vid_02",
+    title: "Customer story — Meridian",
+    status: "rework_requested",
+    regen_limit: 2,
+    regens_used: 1,
+    created_at: ago(2_600),
+    updated_at: ago(300),
+    script: {
+      id: "sc_02",
+      prompt: "Tell the Meridian story: what they tried before, what changed.",
+      body: "Meridian came to us running four tools that didn't talk to each other…",
+      status: "approved",
+      created_at: ago(2_580),
+    },
+    versions: [
+      {
+        id: "vv_02a",
+        video_id: "vid_02",
+        version_no: 1,
+        source: "editor",
+        trigger: "initial",
+        billable: false,
+        status: "rework_requested",
+        asset_url: "https://example.invalid/vid_02_v1.mp4",
+        duration_ms: 78_000,
+        created_at: ago(2_400),
+      },
+    ],
+    notes: [
+      {
+        id: "rn_02",
+        video_version_id: "vv_02a",
+        author_type: "client",
+        author_name: "Priya",
+        body: "Can we cut the intro down? It takes too long to get to the point.",
+        created_at: ago(300),
+      },
+    ],
+  },
+  {
+    id: "vid_01",
+    title: "Founder intro",
+    status: "published",
+    regen_limit: 2,
+    regens_used: 2,
+    created_at: ago(8_000),
+    updated_at: ago(7_000),
+    script: {
+      id: "sc_01",
+      prompt: "Who we are and why we built this.",
+      body: "I started this company after watching the same problem repeat…",
+      status: "approved",
+      created_at: ago(7_990),
+    },
+    versions: [
+      {
+        id: "vv_01c",
+        video_id: "vid_01",
+        version_no: 3,
+        source: "editor",
+        trigger: "client_redo",
+        billable: true,
+        status: "published",
+        asset_url: "https://example.invalid/vid_01_v3.mp4",
+        duration_ms: 55_000,
+        created_at: ago(7_000),
+      },
+    ],
+    notes: [],
+  },
+];
+
+export const tickets: Ticket[] = [
+  {
+    id: "tk_11",
+    type: "video_gen",
+    status: "in_progress",
+    priority: 1,
+    client_id: "cl_02",
+    client_name: "Meridian Labs",
+    subject_id: "vid_09",
+    subject_title: "Series A announcement",
+    assignee_name: "Arun",
+    sla_due_at: ago(-90),
+    created_at: ago(200),
+  },
+  {
+    id: "tk_10",
+    type: "edit",
+    status: "open",
+    priority: 2,
+    client_id: "cl_01",
+    client_name: "Northwind",
+    subject_id: "vid_03",
+    subject_title: "Welcome message for new signups",
+    assignee_name: null,
+    sla_due_at: ago(-300),
+    created_at: ago(40),
+  },
+  {
+    id: "tk_09",
+    type: "script",
+    status: "open",
+    priority: 3,
+    client_id: "cl_03",
+    client_name: "Kestrel & Co",
+    subject_id: "sc_12",
+    subject_title: "Hiring push — engineering",
+    assignee_name: null,
+    sla_due_at: null,
+    created_at: ago(55),
+  },
+  {
+    id: "tk_08",
+    type: "issue",
+    status: "blocked",
+    priority: 1,
+    client_id: "cl_02",
+    client_name: "Meridian Labs",
+    subject_id: "vid_07",
+    subject_title: "Avatar looks wrong in profile shots",
+    assignee_name: "Divya",
+    sla_due_at: ago(120),
+    created_at: ago(600),
+  },
+];
+
+export const staffClients: StaffClient[] = [
+  { id: "cl_01", name: "Northwind", email: "priya@northwind.co", plan: "Ultimate", videos_in_flight: 2, status: "active" },
+  { id: "cl_02", name: "Meridian Labs", email: "ops@meridian.io", plan: "Premium Video", videos_in_flight: 3, status: "active" },
+  { id: "cl_03", name: "Kestrel & Co", email: "hello@kestrel.co", plan: "Premium Video", videos_in_flight: 1, status: "active" },
+  { id: "cl_04", name: "Bramble", email: "team@bramble.app", plan: "Ultimate", videos_in_flight: 0, status: "suspended" },
+];

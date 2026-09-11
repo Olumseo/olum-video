@@ -1,0 +1,96 @@
+name: Build & Deploy Video Frontends
+
+# Mirrors olum-frontend's workflow: build the nginx image, push to ECR, then
+# tell the server (via SSM) to pull and restart the container.
+#
+# Deliberately a SEPARATE pipeline from olum.ai's frontend. Shipping a video
+# UI change must not rebuild or redeploy olum.ai's SPA — that independence is
+# the reason these live in their own repo and their own container.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "Dockerfile"
+      - "nginx.conf"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  ci:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  build:
+    name: Build & push image
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build & push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMG="$REGISTRY/olum/video-frontend"
+          docker build -t "$IMG:${{ github.sha }}" -t "$IMG:latest" .
+          docker push "$IMG:${{ github.sha }}"
+          docker push "$IMG:latest"
+
+  deploy:
+    name: Deploy to server (SSM)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Trigger pull + restart
+        env:
+          INSTANCE_ID: i-0c1f2b5c753c94f53
+        run: |
+          set -e
+          CMD=$(aws ssm send-command --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters 'commands=["bash /opt/olum/deploy-video-frontend.sh"]' \
+            --query 'Command.CommandId' --output text)
+          echo "SSM command: $CMD"
+          for i in $(seq 1 30); do
+            sleep 10
+            S=$(aws ssm get-command-invocation --command-id "$CMD" --instance-id "$INSTANCE_ID" --query Status --output text 2>/dev/null || echo Pending)
+            echo "deploy status: $S"
+            case "$S" in
+              Success) echo "video frontends updated"; exit 0 ;;
+              Failed|Cancelled|TimedOut)
+                aws ssm get-command-invocation --command-id "$CMD" --instance-id "$INSTANCE_ID" --query StandardErrorContent --output text
+                exit 1 ;;
+            esac
+          done
+          echo "timed out"; exit 1

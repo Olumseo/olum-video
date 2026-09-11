@@ -1,0 +1,74 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Olum Video design tokens.
+
+   Values COPIED from olum.ai's design system
+   (olum-frontend/frontend/src/index.css `:root`) on 2026-09-08.
+
+   This is a deliberate ONE-WAY copy, not a shared dependency: the olum.ai
+   frontend lives in a separate repo we do not modify. If olum.ai changes its
+   palette, this file will NOT follow automatically — update it by hand and
+   note the date above. We have a *matching* design system, not a shared one.
+
+   WHY EACH COLOUR IS DEFINED TWICE
+   --------------------------------
+   Tailwind's opacity modifiers (bg-ink/90, border-accent/40) work by injecting
+   an alpha channel into the colour. It can only do that if the value is raw
+   RGB *channels*, because it builds `rgb(<channels> / <alpha>)`. Given a hex
+   value it would emit `rgb(#0e0e0e / 0.9)` — invalid CSS, which browsers drop
+   silently, so the element renders fully transparent with no error anywhere.
+
+   So each colour is stored once as channels (`--ink-rgb`), and once as a
+   ready-made colour built from those channels (`--ink`) for plain CSS. The
+   channels remain the single source of truth; the second line is derived.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Channels — consumed by tailwind-preset.js */
+  --ink-rgb: 14 14 14;
+  --paper-rgb: 245 242 236;
+  --cream-rgb: 237 233 223;
+  --warm-rgb: 232 226 213;
+  --muted-rgb: 154 148 136;
+  --accent-rgb: 193 123 63;
+  --accent-2-rgb: 26 58 46;
+  --danger-rgb: 204 68 68;
+  --success-rgb: 45 122 79;
+
+  /* Ready-made colours — for hand-written CSS and SCSS */
+  --ink: rgb(var(--ink-rgb));
+  --paper: rgb(var(--paper-rgb));
+  --cream: rgb(var(--cream-rgb));
+  --warm: rgb(var(--warm-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --accent: rgb(var(--accent-rgb));
+  --accent-2: rgb(var(--accent-2-rgb));
+  --red: rgb(var(--danger-rgb));
+  --green: rgb(var(--success-rgb));
+
+  /* olum.ai's border is ink at 12% — same colour, same maths. */
+  --border: rgb(var(--ink-rgb) / 0.12);
+
+  --radius: 10px;
+  --radius-lg: 16px;
+
+  /* Type stacks. The font FILES load from a single <link> in each app's
+     index.html, never a CSS @import — an @import cannot begin downloading
+     until this stylesheet has arrived and parsed, adding a chained round trip
+     to the critical path. olum.ai removed theirs for exactly this reason. */
+  --font-sans: "Satoshi", "Inter", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-mono: "DM Mono", "Courier New", monospace;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}

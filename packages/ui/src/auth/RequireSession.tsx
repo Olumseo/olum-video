@@ -1,0 +1,83 @@
+import type { ReactNode } from "react";
+
+import { useSession } from "./useSession";
+import { LoadingRows } from "../components/States";
+
+/**
+ * Gate that renders children only for a signed-in, entitled viewer.
+ *
+ * `signInUrl` and `upgradeUrl` are plain URLs on olum.ai, reached with a real
+ * navigation rather than a router redirect: those pages belong to a different
+ * application, and a client-side redirect would look for a route that does not
+ * exist in this bundle.
+ */
+export function RequireSession({
+  children,
+  signInUrl = "/",
+  upgradeUrl = "/video/welcome/pricing",
+}: {
+  children: ReactNode;
+  signInUrl?: string;
+  upgradeUrl?: string;
+}) {
+  const session = useSession();
+
+  if (session.status === "loading") {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-12">
+        <LoadingRows rows={3} />
+      </div>
+    );
+  }
+
+  if (session.status === "unauthenticated") {
+    return (
+      <Gate
+        heading="Please sign in"
+        body="You need to be signed in to your olum account to use the video product."
+        actionLabel="Go to sign in"
+        href={signInUrl}
+      />
+    );
+  }
+
+  if (session.status === "forbidden") {
+    // Deliberately NOT a sign-in prompt. This viewer is already signed in;
+    // sending them to sign in again would loop them with no way forward.
+    return (
+      <Gate
+        heading="Video isn't on your plan yet"
+        body={session.reason}
+        actionLabel="See plans"
+        href={upgradeUrl}
+      />
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function Gate({
+  heading,
+  body,
+  actionLabel,
+  href,
+}: {
+  heading: string;
+  body: string;
+  actionLabel: string;
+  href: string;
+}) {
+  return (
+    <div className="mx-auto max-w-md px-6 py-24 text-center">
+      <h1 className="font-serif text-2xl">{heading}</h1>
+      <p className="mt-3 text-sm text-muted">{body}</p>
+      <a
+        href={href}
+        className="mt-6 inline-block rounded bg-ink px-5 py-2.5 text-sm text-paper transition-colors hover:bg-accent-2"
+      >
+        {actionLabel}
+      </a>
+    </div>
+  );
+}

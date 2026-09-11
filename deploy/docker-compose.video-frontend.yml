@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Service definition for the olum.video frontend container.
+#
+#  Merge this service into the compose file already running on the server
+#  (the one /opt/olum/deploy-frontend.sh drives). It is provided as a separate
+#  file because that server-side compose is not in any repo I can read.
+#
+#  THE CRITICAL LINE is `networks: [seoolum]`.
+#
+#  olum.ai's nginx proxies to the hostname `video_frontend`. That name is
+#  resolved by Docker's embedded DNS, which only resolves names of containers
+#  on the SAME network. On a different network the proxy returns 502 with
+#  "host not found in upstream" — the single most likely way this setup fails.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  video_frontend:
+    image: ${ECR_REGISTRY}/olum/video-frontend:latest
+    # Must match the hostname in olum-frontend/nginx.conf's proxy_pass.
+    container_name: video_frontend
+    restart: unless-stopped
+    networks:
+      - seoolum
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # No `ports:` on purpose. Nothing reaches this container from the internet
+    # directly — only olum.ai's nginx, over the internal network. Publishing a
+    # port would expose the staff portal on a raw host port, bypassing whatever
+    # protections sit in front of olum.ai.
+
+networks:
+  seoolum:
+    external: true
+    name: seoolum_network

@@ -1,0 +1,11 @@
+{
+  "extends": "@olum-video/tsconfig/library.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "src",
+    // Ships TSX and reads import.meta.env in ErrorBoundary, so it needs Vite's
+    // client types even though it is a library rather than an app.
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

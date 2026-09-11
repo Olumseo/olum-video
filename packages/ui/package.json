@@ -1,0 +1,30 @@
+{
+  "name": "@olum-video/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css",
+    "./tailwind-preset": "./tailwind-preset.js"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@olum-video/api-client": "*",
+    "@olum-video/eslint-config": "*",
+    "@olum-video/tsconfig": "*",
+    "@types/react": "^18.3.5",
+    "react": "^18.3.1",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2",
+    "vitest": "^2.1.1"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}
