@@ -20,6 +20,7 @@ import type {
   VideoVersion,
 } from "../types";
 import * as fixtures from "./data";
+import { onboardingMock } from "./onboarding";
 import { NotFoundError, QuotaError } from "../errors";
 
 const latency = (ms = 350) => new Promise((r) => setTimeout(r, ms));
@@ -193,6 +194,10 @@ export const mockApi = {
     await latency();
     return structuredClone(fixtures.staffClients);
   },
+
+  // Onboarding, twins and briefs live in their own module: they share their
+  // own mutable state and need a way to be PUT into each state for demos.
+  ...onboardingMock,
 };
 
 export type Api = typeof mockApi;

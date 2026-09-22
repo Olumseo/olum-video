@@ -192,3 +192,129 @@ export interface AttachVersionRequest {
   trigger: VersionTrigger;
   note?: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Onboarding, digital twins and briefs.
+//
+//  A client is not usable the moment they pay: a person has to create their
+//  mailbox and studio account, they cross-check it, and they need a digital
+//  twin before any video can exist. See video-service/DESIGN-GUIDE.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The first unmet step, in the order the client experiences them.
+ *
+ * Ordered deliberately: telling someone their twin is not ready when their
+ * account is not even verified sends them to the wrong place.
+ */
+export type Blocker =
+  | ""
+  | "no_entitlement"
+  | "awaiting_managed_email"
+  | "awaiting_provider_account"
+  | "awaiting_provider_verification"
+  | "awaiting_client_confirmation"
+  | "awaiting_digital_twin";
+
+export type ClientStatus =
+  | ""
+  | "pending_provisioning"
+  | "provisioning"
+  | "awaiting_client_check"
+  | "active"
+  | "suspended"
+  | "closed";
+
+/**
+ * What, if anything, is blocking this client from making a video.
+ *
+ * The API refuses `createBrief` on exactly this answer, which is why the UI
+ * must read it rather than deriving its own version — two implementations
+ * drift, and the failure is a button the API then refuses.
+ */
+export interface Readiness {
+  ready: boolean;
+  blocker: Blocker;
+  /** The blocker, phrased for a person. */
+  message: string;
+  client_status: ClientStatus;
+  entitled: boolean;
+  email_created: boolean;
+  provider_created: boolean;
+  provider_verified: boolean;
+  twin_ready: boolean;
+  client_confirmed: boolean;
+}
+
+export type BriefStatus =
+  | "generating"
+  | "ready_for_staff"
+  | "generation_failed"
+  | "approved"
+  | "rejected";
+
+/** The "context page": a prompt, what we know, and the draft staff approve. */
+export interface Brief {
+  id: string;
+  client_id: string;
+  title: string;
+  prompt: string;
+  /** A SNAPSHOT taken when the brief was created, not a live reference. */
+  context: Record<string, unknown>;
+  body: string | null;
+  status: BriefStatus;
+  rounds: number;
+  max_rounds: number;
+  failure_reason: string | null;
+  /** Set once approved and turned into a video. */
+  video_id: string | null;
+  /** Staff views only. */
+  client_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBriefRequest {
+  title: string;
+  prompt: string;
+}
+
+export interface ConfirmSetupRequest {
+  confirmed: boolean;
+  /** Required when confirmed is false — otherwise staff cannot act on it. */
+  reason?: string;
+}
+
+export interface TwinRequestResult {
+  status: string;
+  /** False when a request was already open. */
+  created: boolean;
+  message: string;
+}
+
+/** One row of the staff provisioning queue. Go field names, not snake_case. */
+export interface OnboardingClient {
+  ClientID: string;
+  UserID: string;
+  DisplayName: string;
+  Status: ClientStatus;
+  ManagedEmail: string | null;
+  ExternalID: string | null;
+  Verification: string | null;
+  TicketID: string | null;
+  /** Null means nobody has claimed it. */
+  AssigneeName: string | null;
+  CreatedAt: string;
+}
+
+export interface RecordProviderRequest {
+  managed_email: string;
+  external_account_id?: string;
+  credentials_ref?: string;
+}
+
+export interface MarkTwinReadyRequest {
+  kind: "avatar" | "voice";
+  external_id?: string;
+  name?: string;
+}

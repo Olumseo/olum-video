@@ -1,6 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import { ForbiddenError, NotFoundError, QuotaError, UnauthorizedError } from "./errors";
+import {
+  ForbiddenError,
+  NotFoundError,
+  NotReadyError,
+  QuotaError,
+  UnauthorizedError,
+} from "./errors";
 
 // dpopFetch is stubbed rather than exercised: WebCrypto and IndexedDB are not
 // what these tests are about. What matters is that a status code becomes the
@@ -40,6 +46,42 @@ describe("status code to error mapping", () => {
     expect(err).toBeInstanceOf(ForbiddenError);
     expect(err).not.toBeInstanceOf(UnauthorizedError);
     expect((err as Error).message).toBe("Video isn't on your plan.");
+  });
+
+  // 409 and 403 look similar and mean opposite things to the user.
+  //
+  // 403: "not on your plan" — the UI offers the pricing page.
+  // 409: they HAVE paid and are allowed; a setup step is still outstanding.
+  //
+  // Collapsing them would send a paying customer, two steps from finishing
+  // onboarding, to a page asking them to buy what they already own.
+  it("409 becomes NotReadyError, not ForbiddenError", async () => {
+    fetchMock.mockResolvedValue(
+      response(409, {
+        message: "We're setting up your olum video mailbox.",
+        blocker: "awaiting_managed_email",
+      }),
+    );
+    const err = await httpApi
+      .createBrief({ title: "t", prompt: "p" })
+      .catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(NotReadyError);
+    expect(err).not.toBeInstanceOf(ForbiddenError);
+    expect((err as Error).message).toBe("We're setting up your olum video mailbox.");
+  });
+
+  // The blocker is the whole point of the 409: without it the UI knows
+  // something is wrong but not which step, and cannot link anywhere useful.
+  it("409 carries the blocker through", async () => {
+    fetchMock.mockResolvedValue(
+      response(409, { message: "…", blocker: "awaiting_digital_twin" }),
+    );
+    const err = await httpApi
+      .createBrief({ title: "t", prompt: "p" })
+      .catch((e: unknown) => e);
+
+    expect((err as NotReadyError).blocker).toBe("awaiting_digital_twin");
   });
 
   it("404 becomes NotFoundError", async () => {

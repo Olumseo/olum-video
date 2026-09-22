@@ -1,7 +1,51 @@
 /* Design tokens first, so --ink/--paper/etc. exist before Tailwind's utilities
-   (which reference them via the shared preset) are applied. */
+   (which reference them via the shared preset) are applied.
+
+   `spectrum.css` is imported for one reason here, not for the colour range:
+   it carries the `--muted` correction. olum.ai's own value measures 2.7:1
+   against paper, which fails AA for normal text, and `--muted` carries most of
+   the labels in this app. Without this import the staff portal ships the exact
+   contrast bug the marketing site was audited for. */
 @import "@olum-video/ui/tokens.css";
+@import "@olum-video/ui/spectrum.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Motion.
+
+   A staff member is in here all day, so this is the restrained set from
+   client-web and nothing more: a short entrance on list rows so a refreshed
+   queue reads as "these arrived" rather than as a flash, and nothing that
+   delays a click.
+
+   `transform` and `opacity` only, so the compositor does all of it.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .row-enter {
+    animation: none !important;
+  }
+}
+
+@layer components {
+  /* Staggered entrance. The delay is an inline custom property set per row,
+     so one class does the work of N. */
+  .row-enter {
+    animation: row-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--row-delay, 0ms);
+  }
+}
+
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}

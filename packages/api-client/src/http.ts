@@ -1,12 +1,19 @@
 // The real HTTP client, implementing the same interface as the mock.
 //
-// Not exercised yet — video-service has no endpoints beyond health probes. It
-// exists now so that switching over is a config change (VITE_API_MODE=http)
-// rather than a rewrite, and so the request/response contract is written down
-// while the shape is fresh.
+// Every method here is backed by a live endpoint in video-service and
+// documented in its openapi/openapi.yaml. Switching between this and the
+// fixtures is VITE_API_MODE, nothing more.
 
 import { dpopFetch } from "./dpop";
 import type {
+  Brief,
+  ConfirmSetupRequest,
+  CreateBriefRequest,
+  MarkTwinReadyRequest,
+  OnboardingClient,
+  Readiness,
+  RecordProviderRequest,
+  TwinRequestResult,
   Account,
   AttachVersionRequest,
   CreateVideoRequest,
@@ -19,7 +26,13 @@ import type {
   Video,
 } from "./types";
 import type { Api } from "./mock/client";
-import { ForbiddenError, NotFoundError, QuotaError, UnauthorizedError } from "./errors";
+import {
+  ForbiddenError,
+  NotFoundError,
+  NotReadyError,
+  QuotaError,
+  UnauthorizedError,
+} from "./errors";
 
 const BASE = "/api/v1/video";
 
@@ -39,9 +52,15 @@ async function handle<T>(res: Response): Promise<T> {
   }
 
   let message = "";
+  let blocker = "";
   try {
-    const body = (await res.json()) as { message?: string; detail?: string };
+    const body = (await res.json()) as {
+      message?: string;
+      detail?: string;
+      blocker?: string;
+    };
     message = body.message ?? body.detail ?? "";
+    blocker = body.blocker ?? "";
   } catch {
     /* non-JSON error body */
   }
@@ -53,6 +72,11 @@ async function handle<T>(res: Response): Promise<T> {
       throw new ForbiddenError(message || undefined);
     case 404:
       throw new NotFoundError(message || "Not found.");
+    case 409:
+      // Onboarding is not finished. NOT a 403: the user has paid and is
+      // allowed, so "not on your plan" would be wrong and unactionable. The
+      // blocker names the step that is actually waiting.
+      throw new NotReadyError(message || undefined, blocker);
     case 429:
       throw new QuotaError(message || "You've reached your plan's limit.");
     default:
@@ -145,4 +169,66 @@ export const httpApi: Api = {
 
   listTickets: () => get<Ticket[]>("/staff/tickets"),
   listClients: () => get<StaffClient[]>("/staff/clients"),
+
+  // ── onboarding, twins and briefs ──────────────────────────────────────────
+
+  getReadiness: () => get<Readiness>("/readiness"),
+
+  confirmSetup: (req: ConfirmSetupRequest) =>
+    post<Readiness>("/onboarding/confirm", req, newIdempotencyKey()),
+
+  requestTwin: () => post<TwinRequestResult>("/twin-requests", {}, newIdempotencyKey()),
+
+  listBriefs: () => get<Brief[]>("/briefs"),
+  getBrief: (id: string) => get<Brief>(`/briefs/${encodeURIComponent(id)}`),
+
+  createBrief: (req: CreateBriefRequest) => post<Brief>("/briefs", req, newIdempotencyKey()),
+
+  // ── staff ─────────────────────────────────────────────────────────────────
+
+  listOnboarding: () => get<OnboardingClient[]>("/staff/onboarding"),
+
+  claimOnboarding: (clientId: string) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/claim`, {}, newIdempotencyKey()),
+
+  recordProvider: (clientId: string, req: RecordProviderRequest) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/provider`, req, newIdempotencyKey()),
+
+  verifyProvider: (clientId: string) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/verify`, {}, newIdempotencyKey()),
+
+  submitForCheck: (clientId: string) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/submit`, {}, newIdempotencyKey()),
+
+  markTwinReady: (clientId: string, req: MarkTwinReadyRequest) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/twin`, req, newIdempotencyKey()),
+
+  listPendingBriefs: () => get<Brief[]>("/staff/briefs"),
+  getStaffBrief: (id: string) => get<Brief>(`/staff/briefs/${encodeURIComponent(id)}`),
+
+  writeBrief: (id: string, body: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/write`, { body }, newIdempotencyKey()),
+
+  approveBrief: (id: string) =>
+    post<{ status: string; video_id: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/approve`, {}, newIdempotencyKey()),
+
+  requestBriefChanges: (id: string, reason: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/changes`, { reason }, newIdempotencyKey()),
+
+  rejectBrief: (id: string, reason: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/reject`, { reason }, newIdempotencyKey()),
+
+  assignTicket: (ticketId: string, staffId: string) =>
+    post<{ status: string }>(
+      `/staff/tickets/${encodeURIComponent(ticketId)}/assign`,
+      { staff_id: staffId }, newIdempotencyKey()),
 };
