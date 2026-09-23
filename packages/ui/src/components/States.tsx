@@ -52,7 +52,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       role="alert"
       className="rounded-lg border border-danger/30 bg-danger/5 px-5 py-4 text-sm"
     >
-      <p className="text-danger">{message}</p>
+      <p className="text-danger-ink">{message}</p>
       {onRetry && (
         <button onClick={onRetry} className="mt-2 text-xs text-muted underline underline-offset-4">
           Try again

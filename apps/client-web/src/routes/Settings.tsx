@@ -90,7 +90,7 @@ function Row({ label, value, hint }: { label: string; value: string; hint?: stri
     <div className="flex items-baseline justify-between gap-6">
       <div>
         <span className="text-sm text-muted">{label}</span>
-        {hint && <p className="mt-0.5 text-xs text-muted/80">{hint}</p>}
+        {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
       </div>
       <span className="text-right text-sm">{value}</span>
     </div>
@@ -159,7 +159,7 @@ function AvatarSourceUpload() {
   if (done) {
     return (
       <div className="rounded border border-success/30 bg-success/5 px-4 py-3">
-        <p className="text-sm text-success">
+        <p className="text-sm text-success-ink">
           Recording received. Your account manager will take it from here.
         </p>
       </div>
@@ -177,7 +177,7 @@ function AvatarSourceUpload() {
       />
       {busy && <UploadProgress percent={percent} />}
       {error && (
-        <p role="alert" className="text-xs text-danger">
+        <p role="alert" className="text-xs text-danger-ink">
           {error}
         </p>
       )}

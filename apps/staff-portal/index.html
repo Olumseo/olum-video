@@ -4,10 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>olum.video · Staff</title>
+    <meta name="robots" content="noindex, nofollow" />
+
     <!-- Fonts load from a single <link>, never a CSS @import: an @import cannot
          start downloading until the stylesheet itself has arrived and parsed,
          adding a chained round trip to the critical path. olum.ai removed
-         theirs for this reason — do not reintroduce one. -->
+         theirs for this reason — do not reintroduce one.
+
+         Until this was added, `font-serif` and `font-mono` were used all over
+         these screens while the families they name were never fetched, so every
+         heading fell back to Georgia and every label to Courier. Same request
+         as the other two apps, so a visitor arriving from either reuses the
+         cached response. Satoshi is deliberately absent: it is not a Google
+         font and silently 404s. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Mono:wght@400;500&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Mono:wght@400;500&display=swap"
+      media="print"
+      onload="this.media='all';this.onload=null;"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Mono:wght@400;500&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

@@ -1,0 +1,110 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Motion primitives shared by every Olum Video app.
+
+   The paired states here (`.reveal` + `.reveal.is-in`) are the CSS half of the
+   components in src/motion/ — importing one without the other gives you
+   elements stuck at `opacity: 0`, so apps import this alongside tokens.css.
+
+   Everything animates `transform` and `opacity` and nothing else. Those are the
+   two properties a browser can animate on the compositor without laying out or
+   repainting, which is what keeps these free even on a page that is already
+   spending its frame budget on a canvas.
+
+   They live in plain CSS rather than as Tailwind utilities because a paired
+   state written as utilities means repeating both halves in every JSX call site
+   and keeping them in sync by hand.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  /* Rise-and-fade, applied to whole blocks.
+
+     No `will-change` here, deliberately. It reads like the right hint, but a
+     reveal fires once and then the element sits there for the rest of the
+     session — and `will-change` would hold a dedicated compositor layer for
+     every one of them forever. A page with thirty reveals pays thirty layers
+     of GPU memory to speed up thirty animations that have already finished.
+     A `translate3d` transition is composited while it runs regardless, so the
+     hint buys nothing and costs real memory. */
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    transition:
+      opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal.is-in {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* One masked headline line sliding up into place. 118% rather than 100%
+     because the mask carries descender padding, so the line has further to
+     travel than its own height before it is fully hidden. */
+  .line-rise {
+    transform: translate3d(0, 118%, 0);
+    transition: transform 0.95s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  .line-rise.is-in {
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* Underline that grows from the left on hover. A `border-bottom` toggle
+     cannot be transitioned smoothly and shifts the text by a pixel. */
+  .link-underline {
+    position: relative;
+  }
+  .link-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .link-underline:hover::after,
+  .link-underline[data-active="true"]::after {
+    transform: scaleX(1);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Reduced motion.
+
+   The hooks in src/motion/hooks.ts already branch on `prefers-reduced-motion`
+   so the JavaScript-driven animations never start. This block is the
+   belt-and-braces half: it neutralises every CSS animation in the app,
+   including ones added later that forget to ask.
+
+   Note that it sets the reveal's END state rather than only killing the
+   transition. Disabling the transition alone leaves every revealed block at
+   `opacity: 0` — invisible content, which is far worse than animated content.
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal,
+  .line-rise {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* A visible focus ring everywhere, in the brand accent. A custom-styled surface
+   is the first place the default ring gets lost, and it is the only way a
+   keyboard visitor can tell where they are. */
+:focus-visible {
+  outline: 2px solid rgb(var(--accent-rgb));
+  outline-offset: 3px;
+  border-radius: 4px;
+}

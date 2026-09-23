@@ -15,5 +15,10 @@ export { useSession, useAccount } from "./auth/useSession";
 export type { Session } from "./auth/context";
 export { RequireSession } from "./auth/RequireSession";
 
+// Motion. The paired CSS lives in ./motion.css — an app that imports these
+// components without that stylesheet renders them permanently invisible.
+export { Reveal, RevealLines } from "./motion/Reveal";
+export { useInView, useReducedMotion, useScrollProgress, useScrolled } from "./motion/hooks";
+
 export { presentStatus } from "./status";
 export { relativeTime, duration, formatBytes } from "./format";

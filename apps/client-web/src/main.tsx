@@ -2,9 +2,21 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { ErrorBoundary, SessionProvider } from "@olum-video/ui";
+import { thumbprint } from "@olum-video/api-client";
 
 import App from "./App";
 import "./index.css";
+
+// DEV ONLY. Exposes this browser's DPoP key thumbprint so a local session
+// token can be minted for it:
+//
+//   await __olumThumbprint()        → paste into: go run ./cmd/devtoken -jkt <it>
+//
+// import.meta.env.DEV is replaced with `false` in a production build, so this
+// whole block is removed by the bundler and never ships.
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__olumThumbprint = thumbprint;
+}
 
 const root = document.getElementById("root");
 if (!root) throw new Error("#root not found");

@@ -110,7 +110,7 @@ function WorkItem({ video }: { video: Video }) {
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] ${
                   i < step
-                    ? "border-success bg-success/15 text-success"
+                    ? "border-success bg-success/15 text-success-ink"
                     : i === step
                       ? "border-ink text-ink"
                       : "border-subtle text-muted"

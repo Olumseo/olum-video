@@ -39,7 +39,7 @@ export function VideoPlayer({
             setFailed(false);
             ref.current?.load();
           }}
-          className="text-xs text-accent underline underline-offset-4"
+          className="text-xs text-accent-ink underline underline-offset-4"
         >
           Try again
         </button>

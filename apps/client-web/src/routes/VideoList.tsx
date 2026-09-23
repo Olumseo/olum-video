@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { api, type Video } from "@olum-video/api-client";
 import {
@@ -13,6 +14,16 @@ import {
 } from "@olum-video/ui";
 
 import { useAsync } from "../lib/useAsync";
+
+/**
+ * Cap on the stagger, in rows.
+ *
+ * Without it a client with forty videos waits three seconds for the last row
+ * to appear. Past the sixth the entrance has done its job, so everything after
+ * that shares the sixth row's delay and lands together.
+ */
+const STAGGER_LIMIT = 6;
+const STAGGER_STEP_MS = 45;
 
 export default function VideoList() {
   const { data, error, loading, retry } = useAsync(() => api.listVideos());
@@ -33,24 +44,50 @@ export default function VideoList() {
     );
   }
 
+  const waiting = data.filter((video) => video.status === "client_review").length;
+
   return (
-    <div className="space-y-3">
-      {data.map((video) => (
-        <VideoRow key={video.id} video={video} />
-      ))}
+    <div>
+      {/* A count of what is actually waiting on you, above the list. On a long
+          list the one row that needs an action is otherwise just another row. */}
+      <div className="mb-6 flex items-baseline justify-between gap-4">
+        <h1 className="font-serif text-2xl">Your videos</h1>
+        {waiting > 0 && (
+          <p className="flex items-center gap-2 font-mono text-xs text-accent-ink">
+            <span aria-hidden className="pulse-dot h-1.5 w-1.5 rounded-full bg-accent" />
+            {waiting === 1 ? "1 video needs you" : `${waiting} videos need you`}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {data.map((video, i) => (
+          <VideoRow key={video.id} video={video} index={i} />
+        ))}
+      </div>
     </div>
   );
 }
 
-function VideoRow({ video }: { video: Video }) {
+function VideoRow({ video, index }: { video: Video; index: number }) {
   const status = presentStatus(video.status, "client");
   const latest = video.versions[0];
   const needsYou = video.status === "client_review";
 
   return (
-    <Link to={`/videos/${video.id}`} className="block">
+    <Link
+      to={`/videos/${video.id}`}
+      // `group` is what lets the arrow react to a hover anywhere on the row
+      // rather than only when the pointer is over the arrow itself.
+      className="row-enter group block"
+      style={
+        {
+          "--row-delay": `${Math.min(index, STAGGER_LIMIT) * STAGGER_STEP_MS}ms`,
+        } as CSSProperties
+      }
+    >
       <Card
-        className={`transition-colors hover:border-accent/50 ${needsYou ? "border-accent/40" : ""}`}
+        className={`row-lift hover:border-accent/50 ${needsYou ? "border-accent/40" : ""}`}
       >
         {/* Stacks on phones and sits side-by-side from `sm` up. Side-by-side at
             375px squeezed the title into an ellipsis and wrapped the metadata
@@ -70,8 +107,16 @@ function VideoRow({ video }: { video: Video }) {
           </div>
           {/* self-start keeps the pill hugging the left edge when stacked,
               instead of stretching to the full row width. */}
-          <div className="self-start sm:self-auto">
+          <div className="flex shrink-0 items-center gap-3 self-start sm:self-auto">
             <Badge tone={status.tone}>{status.label}</Badge>
+            {/* Nudges right on hover to signal the row is a link. `aria-hidden`
+                because "arrow" read aloud after the status adds nothing. */}
+            <span
+              aria-hidden
+              className="hidden text-muted transition-transform duration-300 group-hover:translate-x-1 sm:inline"
+            >
+              →
+            </span>
           </div>
         </div>
       </Card>

@@ -71,7 +71,7 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
           </p>
         </div>
         {ticket.sla_due_at && (
-          <span className={`whitespace-nowrap font-mono text-xs ${overdue ? "text-danger" : "text-muted"}`}>
+          <span className={`whitespace-nowrap font-mono text-xs ${overdue ? "text-danger-ink" : "text-muted"}`}>
             {overdue ? "overdue " : "due "}
             {relativeTime(ticket.sla_due_at)}
           </span>

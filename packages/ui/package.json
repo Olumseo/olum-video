@@ -6,6 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./tokens.css": "./src/tokens.css",
+    "./motion.css": "./src/motion.css",
+    "./spectrum.css": "./src/spectrum.css",
     "./tailwind-preset": "./tailwind-preset.js"
   },
   "scripts": {

@@ -10,6 +10,7 @@ import {
   ErrorState,
   Field,
   LoadingRows,
+  Reveal,
   VideoPlayer,
   duration,
   inputClass,
@@ -37,9 +38,16 @@ export default function VideoDetail() {
   const revisionsLeft = current.regen_limit - current.regens_used;
 
   return (
+    // Each block reveals a beat after the one above it, so the page assembles
+    // downward instead of appearing as one slab. Delays are short (60ms) and
+    // the whole sequence is done inside half a second — this is a screen people
+    // open every day, not a page they see once.
     <div className="space-y-6">
       <div>
-        <Link to="/" className="font-mono text-xs text-muted underline underline-offset-4">
+        <Link
+          to="/"
+          className="link-underline font-mono text-xs text-muted transition-colors hover:text-ink"
+        >
           ← All videos
         </Link>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -51,61 +59,69 @@ export default function VideoDetail() {
         </p>
       </div>
 
-      {latest ? (
-        <Player version={latest} />
-      ) : (
-        <Card>
-          <CardBody className="py-10 text-center">
-            <p className="text-sm text-muted">
-              Nothing to watch yet — we're still producing this one.
-            </p>
-          </CardBody>
-        </Card>
-      )}
+      <Reveal delay={60}>
+        {latest ? (
+          <Player version={latest} />
+        ) : (
+          <Card>
+            <CardBody className="py-10 text-center">
+              <p className="text-sm text-muted">
+                Nothing to watch yet — we're still producing this one.
+              </p>
+            </CardBody>
+          </Card>
+        )}
+      </Reveal>
 
       {current.status === "client_review" && latest && (
-        <ReviewPanel
-          video={current}
-          version={latest}
-          revisionsLeft={revisionsLeft}
-          onUpdated={setVideo}
-        />
+        <Reveal delay={120}>
+          <ReviewPanel
+            video={current}
+            version={latest}
+            revisionsLeft={revisionsLeft}
+            onUpdated={setVideo}
+          />
+        </Reveal>
       )}
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-sm text-ink">Script</h2>
-        </CardHeader>
-        <CardBody>
-          <p className="font-mono text-xs uppercase tracking-widest text-muted">Your prompt</p>
-          <p className="mt-1.5 text-sm text-muted">{current.script.prompt || "—"}</p>
-          {current.script.body && (
-            <>
-              <p className="mt-5 font-mono text-xs uppercase tracking-widest text-muted">
-                What we wrote
-              </p>
-              <p className="mt-1.5 whitespace-pre-wrap text-sm">{current.script.body}</p>
-            </>
-          )}
-        </CardBody>
-      </Card>
-
-      {current.notes.length > 0 && (
+      <Reveal delay={180}>
         <Card>
           <CardHeader>
-            <h2 className="text-sm text-ink">History</h2>
+            <h2 className="text-sm text-ink">Script</h2>
           </CardHeader>
-          <CardBody className="space-y-4">
-            {current.notes.map((note) => (
-              <div key={note.id}>
-                <p className="font-mono text-xs text-muted">
-                  {note.author_name} · {relativeTime(note.created_at)}
+          <CardBody>
+            <p className="font-mono text-xs uppercase tracking-widest text-muted">Your prompt</p>
+            <p className="mt-1.5 text-sm text-muted">{current.script.prompt || "—"}</p>
+            {current.script.body && (
+              <>
+                <p className="mt-5 font-mono text-xs uppercase tracking-widest text-muted">
+                  What we wrote
                 </p>
-                <p className="mt-1 text-sm">{note.body}</p>
-              </div>
-            ))}
+                <p className="mt-1.5 whitespace-pre-wrap text-sm">{current.script.body}</p>
+              </>
+            )}
           </CardBody>
         </Card>
+      </Reveal>
+
+      {current.notes.length > 0 && (
+        <Reveal delay={240}>
+          <Card>
+            <CardHeader>
+              <h2 className="text-sm text-ink">History</h2>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              {current.notes.map((note) => (
+                <div key={note.id}>
+                  <p className="font-mono text-xs text-muted">
+                    {note.author_name} · {relativeTime(note.created_at)}
+                  </p>
+                  <p className="mt-1 text-sm">{note.body}</p>
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+        </Reveal>
       )}
     </div>
   );
@@ -177,7 +193,10 @@ function ReviewPanel({
   }
 
   return (
-    <Card className="border-accent/40">
+    // The only card on this page that is asking for something. The soft accent
+    // shadow is what separates "here is your video" from "here is the decision
+    // we need from you" without resorting to a colour fill.
+    <Card className="border-accent/40 shadow-[0_18px_44px_-30px_rgb(var(--accent-rgb)/0.55)]">
       <CardHeader>
         <h2 className="text-sm text-ink">Ready for your review</h2>
       </CardHeader>
@@ -196,7 +215,11 @@ function ReviewPanel({
               <Button onClick={approve} loading={busy === "approve"}>
                 Approve
               </Button>
-              <Button variant="secondary" onClick={() => setAsking(true)} disabled={revisionsLeft <= 0}>
+              <Button
+                variant="secondary"
+                onClick={() => setAsking(true)}
+                disabled={revisionsLeft <= 0}
+              >
                 Request changes
               </Button>
             </div>
@@ -227,7 +250,7 @@ function ReviewPanel({
           </div>
         )}
         {error && (
-          <p role="alert" className="mt-4 text-sm text-danger">
+          <p role="alert" className="mt-4 text-sm text-danger-ink">
             {error}
           </p>
         )}
