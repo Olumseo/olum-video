@@ -14,6 +14,7 @@ import {
 } from "@olum-video/ui";
 
 import { useAsync } from "../lib/useAsync";
+import { AgencyCard } from "../components/AgencyCard";
 
 const ASSET_TONE: Record<string, Tone> = {
   ready: "good",
@@ -24,6 +25,9 @@ const ASSET_TONE: Record<string, Tone> = {
 export default function Settings() {
   const account = useAsync(() => api.getAccount());
   const entitlement = useAsync(() => api.getEntitlement());
+  // Tolerant of a failure: a customer who is not staff gets a 403 here, which
+  // is the ordinary case, not an error worth showing.
+  const agency = useAsync(() => api.getMyAgency().catch(() => ({ agency: null })));
 
   if (account.loading || entitlement.loading) return <LoadingRows rows={3} />;
   if (account.error) return <ErrorState message={account.error} onRetry={account.retry} />;
@@ -35,6 +39,8 @@ export default function Settings() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="font-serif text-3xl">Settings</h1>
+
+      <AgencyCard agency={agency.data?.agency ?? null} onChanged={agency.retry} />
 
       <Card>
         <CardHeader>
