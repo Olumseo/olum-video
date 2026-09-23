@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { isMockApi } from "@olum-video/api-client";
+import { DevBadge } from "@olum-video/ui";
 
 /**
  * Page frame shared by every route in this app.
@@ -25,7 +26,9 @@ export default function Shell({
       {/* Impossible to miss on purpose. Demoing fixtures while believing they
           are live data is how wrong decisions get made. */}
       {isMockApi && (
-        <p className="bg-accent px-4 py-1.5 text-center font-mono text-[11px] text-paper">
+        // `bg-accent-ink`, not `bg-accent`: paper on raw terracotta measures
+        // 3.04:1. Same fix, same reason, as client-web's banner.
+        <p className="bg-accent-ink px-4 py-1.5 text-center font-mono text-[11px] text-paper">
           sample data — not connected to the API
         </p>
       )}
@@ -46,6 +49,9 @@ export default function Shell({
                 {item.label}
               </Link>
             ))}
+            {/* Who am I, and let me be someone else. Dev builds only — the
+                bundler drops this whole branch in production. */}
+            {import.meta.env.DEV && <DevBadge />}
           </nav>
         </div>
       </header>

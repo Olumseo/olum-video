@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { DevSignIn } from "./DevSignIn";
 import { useSession } from "./useSession";
 import { LoadingRows } from "../components/States";
 
@@ -31,6 +32,16 @@ export function RequireSession({
   }
 
   if (session.status === "unauthenticated") {
+    // On a laptop there is no authservice to send them to, so "Go to sign in"
+    // is a dead link and the app cannot be opened at all. Offer the seeded
+    // users instead.
+    //
+    // `import.meta.env.DEV` is a compile-time constant: a production build
+    // evaluates it to false and the bundler drops DevSignIn entirely, so this
+    // is absent rather than merely hidden.
+    if (import.meta.env.DEV) {
+      return <DevSignIn />;
+    }
     return (
       <Gate
         heading="Please sign in"

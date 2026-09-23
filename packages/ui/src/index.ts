@@ -14,6 +14,8 @@ export { SessionProvider } from "./auth/SessionProvider";
 export { useSession, useAccount } from "./auth/useSession";
 export type { Session } from "./auth/context";
 export { RequireSession } from "./auth/RequireSession";
+export { DevSignIn } from "./auth/DevSignIn";
+export { DevBadge } from "./auth/DevBadge";
 
 // Motion. The paired CSS lives in ./motion.css — an app that imports these
 // components without that stylesheet renders them permanently invisible.
