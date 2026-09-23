@@ -5,6 +5,7 @@
 // fixtures is VITE_API_MODE, nothing more.
 
 import { dpopFetch } from "./dpop";
+import { withRefresh } from "./refresh";
 import type {
   Brief,
   ConfirmSetupRequest,
@@ -24,6 +25,16 @@ import type {
   Ticket,
   UploadTicket,
   Video,
+  Agency,
+  TeamMember,
+  TeamInvite,
+  TeamRole,
+  InviteResult,
+  InvitePreview,
+  EditorAssignment,
+  EditorWorkload,
+  QueueCounts,
+  Me,
 } from "./types";
 import type { Api } from "./mock/client";
 import {
@@ -84,22 +95,33 @@ async function handle<T>(res: Response): Promise<T> {
   }
 }
 
+// Both verbs go through withRefresh, so an expired session is renewed in place
+// instead of throwing the user out. The closure is what makes the retry legal:
+// it builds a NEW request, with a new DPoP proof, since a proof's jti is
+// single-use and replaying one is rejected.
 function get<T>(path: string): Promise<T> {
-  return dpopFetch(`${BASE}${path}`).then((r) => handle<T>(r));
+  return withRefresh(() => dpopFetch(`${BASE}${path}`)).then((r) => handle<T>(r));
 }
 
 function post<T>(path: string, body: unknown, idempotencyKey?: string): Promise<T> {
-  return dpopFetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // Every mutation carries one. A request that times out and is retried
-      // must not consume two videos' worth of quota — the server matches on
-      // this key and returns the original result.
-      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-    },
-    body: JSON.stringify(body),
-  }).then((r) => handle<T>(r));
+  // Generated OUTSIDE the closure on purpose. If the retry made a new key the
+  // server would treat it as a second, unrelated action — so a refresh in the
+  // middle of "create video" could charge two videos of quota. The whole point
+  // of the header is that both attempts are recognised as one intent.
+  const key = idempotencyKey;
+  return withRefresh(() =>
+    dpopFetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Every mutation carries one. A request that times out and is retried
+        // must not consume two videos' worth of quota — the server matches on
+        // this key and returns the original result.
+        ...(key ? { "Idempotency-Key": key } : {}),
+      },
+      body: JSON.stringify(body),
+    }),
+  ).then((r) => handle<T>(r));
 }
 
 /** A key that is stable for one user action and unique across actions. */
@@ -108,6 +130,8 @@ function newIdempotencyKey(): string {
 }
 
 export const httpApi: Api = {
+  getMe: () => get<Me>("/me"),
+
   getAccount: () => get<Account>("/account"),
   getEntitlement: () => get<Entitlement>("/entitlement"),
 
@@ -215,9 +239,23 @@ export const httpApi: Api = {
     post<{ status: string }>(
       `/staff/briefs/${encodeURIComponent(id)}/write`, { body }, newIdempotencyKey()),
 
+  // Staff HAND OVER; they no longer approve. `body` is optional: sending it
+  // saves the edit and hands over in one action, which is what the review
+  // screen does.
+  sendBriefToClient: (id: string, body?: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/send`,
+      body === undefined ? {} : { body },
+      newIdempotencyKey()),
+
+  // ── the CLIENT's decision ────────────────────────────────────────────────
   approveBrief: (id: string) =>
     post<{ status: string; video_id: string }>(
-      `/staff/briefs/${encodeURIComponent(id)}/approve`, {}, newIdempotencyKey()),
+      `/briefs/${encodeURIComponent(id)}/approve`, {}, newIdempotencyKey()),
+
+  requestScriptChanges: (id: string, note: string) =>
+    post<{ status: string }>(
+      `/briefs/${encodeURIComponent(id)}/changes`, { note }, newIdempotencyKey()),
 
   requestBriefChanges: (id: string, reason: string) =>
     post<{ status: string }>(
@@ -231,4 +269,32 @@ export const httpApi: Api = {
     post<{ status: string }>(
       `/staff/tickets/${encodeURIComponent(ticketId)}/assign`,
       { staff_id: staffId }, newIdempotencyKey()),
+
+  // ── editors ──────────────────────────────────────────────────────────────
+  listMyAssignments: () => get<EditorAssignment[]>("/staff/my-work"),
+  listEditors: () => get<EditorWorkload[]>("/staff/editors"),
+  getQueueCounts: () => get<QueueCounts>("/staff/counts"),
+
+  // ── agencies ─────────────────────────────────────────────────────────────
+  registerAgency: (name: string) =>
+    post<Agency>("/agency", { name }, newIdempotencyKey()),
+
+  getMyAgency: () => get<{ agency: Agency | null }>("/agency"),
+
+  getTeam: () => get<{ members: TeamMember[]; invites: TeamInvite[] }>("/agency/team"),
+
+  inviteMember: (email: string, position: string, role: TeamRole) =>
+    post<InviteResult>("/agency/team/invites",
+      { email, position, role }, newIdempotencyKey()),
+
+  revokeInvite: (id: string) =>
+    post<{ status: string }>(
+      `/agency/team/invites/${encodeURIComponent(id)}/revoke`, {}, newIdempotencyKey()),
+
+  // No session required — the invitee does not have one yet.
+  peekInvite: (token: string) =>
+    get<InvitePreview>(`/agency/invites/peek?token=${encodeURIComponent(token)}`),
+
+  acceptInvite: (token: string, name: string) =>
+    post<Agency>("/agency/join", { token, name }, newIdempotencyKey()),
 };

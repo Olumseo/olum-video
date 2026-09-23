@@ -21,6 +21,7 @@ import type {
 } from "../types";
 import * as fixtures from "./data";
 import { onboardingMock } from "./onboarding";
+import { agencyMock } from "./agency";
 import { NotFoundError, QuotaError } from "../errors";
 
 const latency = (ms = 350) => new Promise((r) => setTimeout(r, ms));
@@ -198,6 +199,9 @@ export const mockApi = {
   // Onboarding, twins and briefs live in their own module: they share their
   // own mutable state and need a way to be PUT into each state for demos.
   ...onboardingMock,
+
+  // Agencies, teams and the editor's own queue.
+  ...agencyMock,
 };
 
 export type Api = typeof mockApi;

@@ -31,6 +31,14 @@ export default function NewBrief() {
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
+
+  // "Describe it" or "I've written it".
+  //
+  // Two modes rather than two always-visible boxes: a form showing both asks
+  // people to decide what the difference is before they can start, and most
+  // will fill in the first one regardless.
+  const [mode, setMode] = useState<"prompt" | "script">("prompt");
+  const [script, setScript] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
@@ -44,7 +52,14 @@ export default function NewBrief() {
     setBlocked(false);
     setSubmitting(true);
     try {
-      const brief = await api.createBrief({ title: title.trim(), prompt: prompt.trim() });
+      const brief = await api.createBrief(
+        mode === "script"
+          ? // The prompt still carries the title: the server keeps a prompt on
+            // every brief, and leaving it empty makes the staff queue show a
+            // blank line where the ask should be.
+            { title: title.trim(), prompt: title.trim(), script: script.trim() }
+          : { title: title.trim(), prompt: prompt.trim() },
+      );
       navigate(`/briefs/${brief.id}`);
     } catch (err) {
       if (err instanceof NotReadyError) {
@@ -64,7 +79,8 @@ export default function NewBrief() {
     }
   }
 
-  const canSubmit = title.trim().length > 0 && prompt.trim().length > 0 && !outOfQuota;
+  const filledIn = mode === "script" ? script.trim().length > 0 : prompt.trim().length > 0;
+  const canSubmit = title.trim().length > 0 && filledIn && !outOfQuota;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -117,36 +133,89 @@ export default function NewBrief() {
           </div>
 
           <div>
-            <label
-              htmlFor="prompt"
-              className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted"
-            >
-              What do you want to say?
-            </label>
-            <textarea
-              id="prompt"
-              rows={6}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="We've changed how our pricing works — three tiers instead of five, and the middle one now includes…"
-              className="mt-3 w-full resize-y rounded-card border border-subtle bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-muted/50 transition-colors duration-500 ease-luxe focus:border-ink focus:outline-none"
-            />
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <label
+                htmlFor={mode === "script" ? "script" : "prompt"}
+                className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted"
+              >
+                {mode === "script" ? "Your script" : "What do you want to say?"}
+              </label>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-                or try
-              </span>
-              {EXAMPLES.map((example) => (
-                <button
-                  key={example}
-                  type="button"
-                  onClick={() => setPrompt(example)}
-                  className="rounded-full border border-subtle px-3 py-1.5 text-[12px] text-muted transition-colors duration-300 hover:border-ink/30 hover:text-ink"
-                >
-                  {example}
-                </button>
-              ))}
+              <div
+                role="tablist"
+                aria-label="How you want to give us the words"
+                className="inline-flex rounded-full border border-subtle p-0.5"
+              >
+                {(
+                  [
+                    ["prompt", "Describe it"],
+                    ["script", "I've written it"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === value}
+                    onClick={() => setMode(value)}
+                    className={`rounded-full px-4 py-1.5 text-[12px] transition-colors duration-300 ease-luxe ${
+                      mode === value
+                        ? "bg-ink text-paper"
+                        : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {mode === "prompt" ? (
+              <>
+                <textarea
+                  id="prompt"
+                  rows={6}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="We've changed how our pricing works — three tiers instead of five, and the middle one now includes…"
+                  className="mt-3 w-full resize-y rounded-card border border-subtle bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-muted/50 transition-colors duration-500 ease-luxe focus:border-ink focus:outline-none"
+                />
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
+                    or try
+                  </span>
+                  {EXAMPLES.map((example) => (
+                    <button
+                      key={example}
+                      type="button"
+                      onClick={() => setPrompt(example)}
+                      className="rounded-full border border-subtle px-3 py-1.5 text-[12px] text-muted transition-colors duration-300 hover:border-ink/30 hover:text-ink"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <textarea
+                  id="script"
+                  rows={12}
+                  value={script}
+                  onChange={(e) => setScript(e.target.value)}
+                  placeholder={"Hi, I'm Priya.\n\nThis quarter we changed how our pricing works…"}
+                  // Serif and generous leading: this is the thing that will be
+                  // said out loud, and it should read like a script rather than
+                  // like a form field.
+                  className="mt-3 w-full resize-y rounded-card border border-subtle bg-paper px-5 py-4 font-serif text-[15px] leading-[1.75] text-ink placeholder:text-muted/50 transition-colors duration-500 ease-luxe focus:border-ink focus:outline-none"
+                />
+                <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                  We won&rsquo;t rewrite this. Someone will read it through, check it
+                  works on camera, and send it back to you to approve.
+                </p>
+              </>
+            )}
           </div>
 
           {error && (

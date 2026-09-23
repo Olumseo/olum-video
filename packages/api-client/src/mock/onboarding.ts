@@ -138,18 +138,25 @@ export const onboardingMock = {
       // that matters most — the one where the client is blocked.
       throw new NotReadyError(readiness.message, readiness.blocker);
     }
+    // A supplied script skips generation, exactly as the server does: the
+    // words already exist, so it opens in front of staff with the body set.
+    const wroteItThemselves = Boolean(req.script?.trim());
+
     const brief: Brief = {
       id: `b-${Date.now()}`,
       client_id: fixtures.account.id,
       title: req.title,
       prompt: req.prompt,
       context: structuredClone(fixtures.briefs[0]!.context),
-      body: null,
-      status: "generating",
+      body: wroteItThemselves ? req.script!.trim() : null,
+      status: wroteItThemselves ? "ready_for_staff" : "generating",
       rounds: 0,
       max_rounds: 2,
       failure_reason: null,
       video_id: null,
+      source: wroteItThemselves ? "script" : "prompt",
+      sent_to_client_at: null,
+      client_decided_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -238,13 +245,55 @@ export const onboardingMock = {
     return { status: "ready_for_staff" };
   },
 
+  // Staff hand the script over. The mock enforces the same rule the server
+  // does — ready_for_staff goes to the CLIENT, not straight to approved —
+  // because a mock that allows an illegal transition teaches the UI a flow
+  // the API will reject.
+  async sendBriefToClient(id: string, body?: string): Promise<{ status: string }> {
+    await latency();
+    briefs = briefs.map((b) =>
+      b.id === id
+        ? {
+            ...b,
+            body: body ?? b.body,
+            status: "awaiting_client_approval" as const,
+            sent_to_client_at: new Date().toISOString(),
+          }
+        : b,
+    );
+    return { status: "awaiting_client_approval" };
+  },
+
   async approveBrief(id: string): Promise<{ status: string; video_id: string }> {
     await latency();
     const videoId = `v-${Date.now()}`;
     briefs = briefs.map((b) =>
-      b.id === id ? { ...b, status: "approved" as const, video_id: videoId } : b,
+      b.id === id
+        ? {
+            ...b,
+            status: "approved" as const,
+            video_id: videoId,
+            client_decided_at: new Date().toISOString(),
+          }
+        : b,
     );
     return { status: "approved", video_id: videoId };
+  },
+
+  async requestScriptChanges(id: string, note: string): Promise<{ status: string }> {
+    await latency();
+    briefs = briefs.map((b) =>
+      b.id === id
+        ? {
+            ...b,
+            status: "ready_for_staff" as const,
+            rounds: b.rounds + 1,
+            sent_to_client_at: null,
+            failure_reason: note,
+          }
+        : b,
+    );
+    return { status: "ready_for_staff" };
   },
 
   async requestBriefChanges(id: string, reason: string): Promise<{ status: string }> {

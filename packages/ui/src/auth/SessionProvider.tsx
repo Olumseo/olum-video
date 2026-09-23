@@ -17,18 +17,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    api.getAccount().then(
-      (account) => {
-        if (!cancelled) setSession({ status: "authenticated", account });
+    // GET /me, not GET /account.
+    //
+    // /account answers "what is my subscription", and a 403 from it used to
+    // stand in for "who are you". That conflation is what locked agency staff
+    // out of the portal: they have no subscription and never will. /me returns
+    // both facts, either of which may legitimately be null.
+    api.getMe().then(
+      (me) => {
+        if (!cancelled) {
+          setSession({ status: "authenticated", account: me.account, staff: me.staff });
+        }
       },
       (err: unknown) => {
         if (cancelled) return;
         if (err instanceof UnauthorizedError) {
           setSession({ status: "unauthenticated" });
         } else if (err instanceof ForbiddenError) {
-          // Signed in, but not entitled to video. A distinct state: sending
-          // this user to sign in again would loop them forever, since signing
-          // in is not the problem.
+          // Kept for the case where the whole product is withheld. Distinct
+          // from unauthenticated: sending this user to sign in again would
+          // loop them forever, since signing in is not the problem.
           setSession({ status: "forbidden", reason: err.message });
         } else {
           // A network blip must not look like being signed out — that would

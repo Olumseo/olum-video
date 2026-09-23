@@ -11,11 +11,21 @@
  */
 
 import { useState } from "react";
-import { useAccount } from "./useSession";
+import { useAccount, useStaff } from "./useSession";
 
 export function DevBadge() {
   const account = useAccount();
+  const staff = useStaff();
   const [busy, setBusy] = useState(false);
+
+  // Staff name first. An agency's employee has no customer account at all, so
+  // reading only the account showed them a badge saying "signed in" with no
+  // clue which persona they had picked — which is the one thing this badge is
+  // for.
+  // Name only. The shell already prints the organisation and position beside
+  // this badge, and repeating them turned the header into one long run of
+  // dotted fragments with the actual identity buried in the middle.
+  const who = staff?.name ?? account?.name ?? "signed in";
 
   async function switchUser() {
     setBusy(true);
@@ -39,7 +49,7 @@ export function DevBadge() {
         title="development build"
         className="h-1.5 w-1.5 rounded-full bg-amber"
       />
-      <span className="hidden sm:inline">{account?.name ?? "signed in"}</span>
+      <span className="hidden sm:inline">{who}</span>
       <button
         onClick={switchUser}
         disabled={busy}

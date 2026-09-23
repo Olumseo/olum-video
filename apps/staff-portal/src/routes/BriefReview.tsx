@@ -12,16 +12,21 @@
 
 import { useEffect, useState } from "react";
 import { api, type Brief } from "@olum-video/api-client";
-import { EmptyState, ErrorState, LoadingRows, relativeTime } from "@olum-video/ui";
+import { EmptyState, ErrorState, LoadingRows, presentBrief, relativeTime } from "@olum-video/ui";
 
 import { useAsync } from "../lib/useAsync";
 
-const STATUS: Record<Brief["status"], { label: string; tone: string }> = {
-  generating: { label: "Needs writing", tone: "text-accent-ink" },
-  ready_for_staff: { label: "Needs a decision", tone: "text-indigo-ink" },
-  generation_failed: { label: "Failed", tone: "text-flare-ink" },
-  approved: { label: "Approved", tone: "text-success-ink" },
-  rejected: { label: "Rejected", tone: "text-muted" },
+/**
+ * Colour only. The words come from presentBrief, shared with the client app,
+ * so a new state cannot be added to one side and forgotten on the other.
+ */
+const TONE: Record<string, string> = {
+  generating: "text-accent-ink",
+  ready_for_staff: "text-indigo-ink",
+  awaiting_client_approval: "text-teal-ink",
+  generation_failed: "text-flare-ink",
+  approved: "text-success-ink",
+  rejected: "text-muted",
 };
 
 export default function BriefReview() {
@@ -80,10 +85,10 @@ export default function BriefReview() {
                   </p>
                   <p
                     className={`mt-2 font-mono text-[10px] uppercase tracking-[0.14em] ${
-                      STATUS[brief.status].tone
+                      TONE[brief.status] ?? "text-muted"
                     }`}
                   >
-                    {STATUS[brief.status].label} · {relativeTime(brief.created_at)}
+                    {presentBrief(brief.status, "staff").label} · {relativeTime(brief.created_at)}
                   </p>
                 </button>
               </li>
@@ -107,6 +112,11 @@ function Detail({ brief, onChange }: { brief: Brief; onChange: () => void }) {
   const facts = Object.entries(brief.context ?? {}).filter(([, v]) => v != null && v !== "");
   const roundsLeft = brief.max_rounds - brief.rounds;
 
+  // Sent, and waiting on them. The editor stays readable but "send" is off:
+  // sending twice is harmless server-side, and the button saying so is what
+  // stops somebody wondering whether the first one worked.
+  const withClient = brief.status === "awaiting_client_approval";
+
   async function run(fn: () => Promise<unknown>) {
     setError(null);
     setBusy(true);
@@ -128,14 +138,26 @@ function Detail({ brief, onChange }: { brief: Brief; onChange: () => void }) {
         <h2 className="font-serif text-2xl">{brief.title}</h2>
         <span
           className={`font-mono text-[11px] uppercase tracking-[0.16em] ${
-            STATUS[brief.status].tone
+            TONE[brief.status] ?? "text-muted"
           }`}
         >
-          {STATUS[brief.status].label}
+          {presentBrief(brief.status, "staff").label}
         </span>
       </div>
       <p className="mt-1 font-mono text-[11px] text-muted">
         {brief.client_name} · round {brief.rounds + 1} of {brief.max_rounds + 1}
+        {brief.source === "script" && " · client wrote this"}
+      </p>
+
+      {/* Whose turn it is, said plainly at the top. The status word alone
+          leaves "do I need to do something?" as an inference. */}
+      <p
+        className={`mt-4 rounded-[12px] px-4 py-3 text-[13px] leading-relaxed ${
+          withClient ? "bg-teal/10 text-teal-ink" : "bg-cream/60 text-muted"
+        }`}
+      >
+        {presentBrief(brief.status, "staff").detail}
+        {withClient && brief.sent_to_client_at && ` Sent ${relativeTime(brief.sent_to_client_at)}.`}
       </p>
 
       <section className="mt-6">
@@ -149,9 +171,7 @@ function Detail({ brief, onChange }: { brief: Brief; onChange: () => void }) {
 
       {facts.length > 0 && (
         <section className="mt-5">
-          <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-            Context
-          </h3>
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Context</h3>
           <dl className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
             {facts.map(([key, value]) => (
               <div key={key} className="flex gap-2 text-[13px]">
@@ -172,9 +192,7 @@ function Detail({ brief, onChange }: { brief: Brief; onChange: () => void }) {
       )}
 
       <section className="mt-6">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-          The script
-        </h3>
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">The script</h3>
         <textarea
           rows={14}
           value={body}
@@ -228,18 +246,17 @@ function Detail({ brief, onChange }: { brief: Brief; onChange: () => void }) {
           >
             Save draft
           </button>
+          {/* Hand it over — staff no longer approve on the client's behalf.
+              The body goes WITH the request rather than in a separate save,
+              so there is no window where the client is shown the previous
+              draft because an edit did not get stored first. */}
           <button
-            disabled={busy || body.trim().length === 0}
-            onClick={() => run(async () => {
-              // Save first: approving turns whatever is STORED into the script,
-              // so unsaved edits in this box would be silently dropped and a
-              // video made from the previous draft.
-              if (body !== (brief.body ?? "")) await api.writeBrief(brief.id, body);
-              await api.approveBrief(brief.id);
-            })}
+            disabled={busy || body.trim().length === 0 || withClient}
+            title={withClient ? "Already with the client" : undefined}
+            onClick={() => run(() => api.sendBriefToClient(brief.id, body))}
             className="rounded-full bg-ink px-5 py-2 text-sm text-paper transition-colors hover:bg-accent-2 disabled:opacity-40"
           >
-            Approve &amp; make it
+            Send to client &rarr;
           </button>
           <button
             disabled={busy || roundsLeft <= 0}

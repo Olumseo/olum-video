@@ -11,7 +11,7 @@ export { VideoPlayer } from "./components/VideoPlayer";
 export { FileUpload, UploadProgress } from "./components/FileUpload";
 
 export { SessionProvider } from "./auth/SessionProvider";
-export { useSession, useAccount } from "./auth/useSession";
+export { useSession, useAccount, useStaff } from "./auth/useSession";
 export type { Session } from "./auth/context";
 export { RequireSession } from "./auth/RequireSession";
 export { DevSignIn } from "./auth/DevSignIn";
@@ -22,5 +22,5 @@ export { DevBadge } from "./auth/DevBadge";
 export { Reveal, RevealLines } from "./motion/Reveal";
 export { useInView, useReducedMotion, useScrollProgress, useScrolled } from "./motion/hooks";
 
-export { presentStatus } from "./status";
+export { presentStatus, presentBrief, type BriefPresentation } from "./status";
 export { relativeTime, duration, formatBytes } from "./format";

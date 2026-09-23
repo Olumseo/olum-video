@@ -249,6 +249,8 @@ export interface Readiness {
 export type BriefStatus =
   | "generating"
   | "ready_for_staff"
+  /** Staff have finished the script and handed it to the client to decide. */
+  | "awaiting_client_approval"
   | "generation_failed"
   | "approved"
   | "rejected";
@@ -270,13 +272,108 @@ export interface Brief {
   video_id: string | null;
   /** Staff views only. */
   client_name?: string;
+  /**
+   * Where the words came from. "script" means the CLIENT wrote them, so the
+   * UI must not present it as something we drafted for them.
+   */
+  source: "prompt" | "script";
+  /** Set when it reached the client, and when they decided. */
+  sent_to_client_at: string | null;
+  client_decided_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateBriefRequest {
   title: string;
+  /** Either this or `script`. A prompt is a description of what they want. */
   prompt: string;
+  /** Either this or `prompt`. A script is the finished words. */
+  script?: string;
+}
+
+// ── agencies ────────────────────────────────────────────────────────────────
+
+export interface Agency {
+  id: string;
+  name: string;
+  owner_user_id: string;
+  created_at: string;
+}
+
+/** A permission, not a job title. See `position` for the title. */
+export type TeamRole = "employee" | "editor" | "admin";
+
+export interface TeamMember {
+  staff_id: string;
+  user_id: string;
+  name: string;
+  position: string | null;
+  roles: TeamRole[];
+  is_owner: boolean;
+  active: boolean;
+}
+
+export interface TeamInvite {
+  id: string;
+  email: string;
+  position: string | null;
+  role: TeamRole;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+  /**
+   * Present ONLY on the response that created the invite. The server stores a
+   * hash, so this cannot be fetched again — show it or lose it.
+   */
+  token?: string;
+}
+
+export interface InviteResult {
+  invite: TeamInvite;
+  /** The full URL to send. Only available at creation, same as the token. */
+  link: string;
+}
+
+/** What someone holding an invite link is told before they sign in. */
+export interface InvitePreview {
+  agency_name: string;
+  position: string;
+  role: TeamRole;
+}
+
+// ── editors ─────────────────────────────────────────────────────────────────
+
+export interface EditorAssignment {
+  ticket_id: string;
+  ticket_type: string;
+  ticket_status: string;
+  priority: number;
+  video_id: string | null;
+  title: string;
+  video_status: VideoStatus | null;
+  client_id: string;
+  client_name: string;
+  sla_due_at: string | null;
+  assigned_at: string;
+}
+
+/** An editor and how much they are already carrying. */
+export interface EditorWorkload {
+  staff_id: string;
+  name: string;
+  position: string | null;
+  open: number;
+  in_flight: number;
+}
+
+export interface QueueCounts {
+  onboarding: number;
+  briefs_to_write: number;
+  awaiting_client: number;
+  videos_to_produce: number;
+  my_assignments: number;
+  unassigned: number;
 }
 
 export interface ConfirmSetupRequest {
@@ -317,4 +414,31 @@ export interface MarkTwinReadyRequest {
   kind: "avatar" | "voice";
   external_id?: string;
   name?: string;
+}
+
+// ── who am I ────────────────────────────────────────────────────────────────
+
+/** The caller as a member of staff. Absent for ordinary customers. */
+export interface StaffIdentity {
+  id: string;
+  name: string;
+  roles: TeamRole[];
+  position: string | null;
+  /** null = they work for olum itself, not for an agency. */
+  agency_id: string | null;
+  agency_name: string | null;
+}
+
+/**
+ * Identity, said directly.
+ *
+ * Both halves are nullable and neither being present is a valid answer, not an
+ * error: the apps used to infer this from GET /account returning 403, which
+ * told every agency employee — who has a staff row and no subscription — to go
+ * and buy the product they are employed to operate.
+ */
+export interface Me {
+  user_id: string;
+  account: Account | null;
+  staff: StaffIdentity | null;
 }

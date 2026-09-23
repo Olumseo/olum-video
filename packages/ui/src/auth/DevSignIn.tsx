@@ -84,8 +84,28 @@ const PERSONAS: { id: string; label: string; detail: string }[] = [
   },
   {
     id: "eeeeeeee-0000-4000-8000-000000000009",
-    label: "Staff member",
-    detail: "Ready client AND staff — use this for the staff portal",
+    label: "olum staff — admin",
+    detail: "Sees olum's own queue. Use this for the staff portal",
+  },
+  {
+    id: "eeeeeeee-0000-4000-8000-00000000000e",
+    label: "olum staff — editor",
+    detail: "Has videos assigned — the “on your desk” screen",
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000001",
+    label: "Agency owner",
+    detail: "Northwind Agency — manages a team and their own clients",
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000002",
+    label: "Agency editor",
+    detail: "On Northwind's team — sees only their clients",
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000003",
+    label: "An agency's client",
+    detail: "Signed up through Northwind, so their work goes to Northwind",
   },
 ];
 
@@ -139,6 +159,11 @@ export function DevSignIn() {
       <p className="mt-3 text-sm leading-relaxed text-muted">
         There&rsquo;s no authservice on a laptop, so pick a seeded user. Each one
         sits at a different point in the flow.
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-muted">
+        The last four exist to make the agency rule visible: an agency&rsquo;s
+        client is served by that agency&rsquo;s staff, never by olum&rsquo;s. Sign
+        in as each and compare the queues.
       </p>
 
       <p className="mt-4 rounded-card border border-subtle bg-ink/[0.03] px-4 py-3 text-[13px] leading-relaxed text-muted">
