@@ -1,10 +1,10 @@
 /**
  * The home page.
  *
- * The argument, in order: make one claim (hero), prove it immediately with real
- * footage (showcase), say plainly what the thing is (statement), sketch how it
- * works and hand off to the page that goes deep (steps), show the range
- * (marquee), back it with numbers, name the part that cannot be automated, ask.
+ * The argument, in order: the promise (hero), proof in real footage
+ * (showcase), how it works in five steps, everything that is handled, who it
+ * is for, the one part a person always does, the questions people ask, and
+ * the ask.
  *
  * Proof comes second, before any explanation. Every competitor's page explains
  * first and shows a demo near the bottom; by then the reader has spent their
@@ -14,46 +14,64 @@
 import { Link } from "react-router-dom";
 import { Reveal, RevealLines } from "@olum-video/ui";
 
-import { Counter } from "../components/Counter";
 import { Marquee } from "../components/Marquee";
 import { HomeHero } from "../sections/HomeHero";
 import { Showcase } from "../sections/Showcase";
 import { Steps } from "../sections/Steps";
 
-const USES_TOP = [
-  "Product updates",
-  "Founder notes",
-  "Weekly recaps",
-  "Customer answers",
-  "Launch announcements",
-  "Hiring posts",
+/** Everything Olum does, as one checklist. */
+const HANDLED = [
+  "A personalized AI avatar",
+  "Content ideas",
+  "Topic research",
+  "Scripts and hooks",
+  "Captions",
+  "Edited videos",
+  "Daily content",
+  "Social media posting",
+  "Performance tracking",
+  "Continuous improvement",
 ];
 
-const USES_BOTTOM = [
-  "Feature explainers",
-  "Conference follow-ups",
-  "Changelog videos",
-  "Partner intros",
-  "Sales follow-ups",
-  "Company news",
-];
+const WHO_TOP = ["Founders", "Coaches", "Consultants", "Creators"];
+const WHO_BOTTOM = ["Educators", "Business owners", "Personal brands", "Experts"];
 
 /**
- * Every figure here is backed by copy that already exists elsewhere on the
- * site. No turnaround times, no volume claims — a marketing page is the worst
- * possible place to invent an SLA we have not committed to.
+ * The FAQ, in one place: the list on the page AND the structured data search
+ * engines read are both built from this, so they cannot disagree.
  */
-const STATS = [
-  { value: 1, suffix: "", label: "recording session. Ever.", hue: "text-flare-ink" },
-  // Terracotta here, not amber, even though amber is the next hue along the
-  // spectrum. Amber measures 2:1 against paper — fine behind a gradient, far
-  // too weak for a figure that is the whole point of the tile. The rule is
-  // written down in spectrum.css; this is the first place it bit.
-  { value: 0, suffix: "", label: "cameras to set up after that", hue: "text-accent-ink" },
-  { value: 2, suffix: "", label: "revisions per video, included", hue: "text-teal-ink" },
-  { value: 100, suffix: "%", label: "of cuts reviewed by a person", hue: "text-violet-ink" },
+const FAQ = [
+  {
+    q: "Do I need to record every day?",
+    a: "No. Olum uses your AI avatar to create new videos.",
+  },
+  {
+    q: "Do I need to write the scripts?",
+    a: "No. Olum researches the topics and writes the scripts, hooks, and captions.",
+  },
+  {
+    q: "Do I need to edit or post the videos?",
+    a: "No. Olum edits and publishes the videos for you.",
+  },
+  {
+    q: "How does Olum improve my content?",
+    a: "Olum tracks how your posts perform. It uses that information to improve future ideas, scripts, hooks, captions, and videos.",
+  },
+  {
+    q: "What do I need to provide?",
+    a: "Share a few videos of yourself and basic information about your business, audience, and goals. Olum handles the rest.",
+  },
 ];
 
+const FAQ_SCHEMA = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+});
 
 export default function Home() {
   return (
@@ -66,52 +84,79 @@ export default function Home() {
       <div id="showcase" className="scroll-mt-24" />
       <Showcase />
 
-      <section className="mx-auto max-w-5xl px-6 py-24 text-center lg:py-32">
-        <RevealLines
-          as="p"
-          className="font-display text-[clamp(1.4rem,3.4vw,2.7rem)] leading-[1.28] tracking-tight"
-          lines={[
-            "olum.video is an AI daily video studio",
-            "that runs on one recording of you —",
-            <>
-              scripted from your prompt,{" "}
-              <span className="text-teal-ink">cut by a human editor</span>,
-            </>,
-            "published under your name.",
-          ]}
-        />
-      </section>
-
       <Steps />
 
-      <section className="py-4 lg:py-8" aria-label="What people make with olum.video">
-        <Reveal>
-          <p className="mx-auto mb-10 max-w-7xl px-6 font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
-            One twin, every format
-          </p>
-        </Reveal>
-        <div className="space-y-3">
-          <Marquee items={USES_TOP} durationSeconds={46} />
-          <Marquee items={USES_BOTTOM} durationSeconds={52} reverse />
-        </div>
-      </section>
-
-      <section className="mt-20 border-y border-subtle bg-cream/50 lg:mt-28">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-20 sm:grid-cols-2 lg:grid-cols-4 lg:py-24">
-          {STATS.map((stat, i) => (
-            <Reveal key={stat.label} delay={i * 110}>
-              <p
-                className={`font-serif text-[clamp(2.6rem,6vw,4.2rem)] leading-none tracking-tight ${stat.hue}`}
-              >
-                <Counter to={stat.value} suffix={stat.suffix} />
+      {/* ── Everything is handled for you ─────────────────────────────── */}
+      <section
+        className="border-y border-subtle bg-cream/50"
+        aria-label="Everything is handled for you"
+      >
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-24 lg:grid-cols-12 lg:gap-16 lg:py-32">
+          <div className="lg:col-span-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
+              With Olum, you get
+            </p>
+            <RevealLines
+              as="h2"
+              className="mt-4 font-serif text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.1] tracking-tight"
+              lines={["Everything is", <span className="text-spectrum">handled for you.</span>]}
+            />
+            <Reveal delay={200}>
+              <p className="mt-8 max-w-readable text-[15px] leading-relaxed text-muted">
+                You do not need to plan, write, record, edit, post, or analyze your content.
               </p>
-              <p className="mt-4 max-w-[22ch] text-sm leading-relaxed text-muted">{stat.label}</p>
+              <p className="mt-2 text-[17px] text-ink">Olum does it for you.</p>
             </Reveal>
-          ))}
+          </div>
+
+          <ul className="grid gap-3 sm:grid-cols-2 lg:col-span-7">
+            {HANDLED.map((item, i) => (
+              <Reveal key={item} delay={i * 45}>
+                <li className="flex items-center gap-3 rounded-card border border-subtle bg-paper px-5 py-4 text-[15px] text-ink">
+                  <span
+                    aria-hidden
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-ink text-paper"
+                  >
+                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                      <path
+                        d="M1.5 5.2 3.9 7.6 8.5 2.6"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  {item}
+                </li>
+              </Reveal>
+            ))}
+          </ul>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-24 lg:py-36">
+      {/* ── Who is Olum for? ──────────────────────────────────────────── */}
+      <section className="py-24 lg:py-32" aria-label="Who is Olum for?">
+        <div className="mx-auto max-w-4xl px-6 text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
+            Who is Olum for?
+          </p>
+          <Reveal delay={80}>
+            <p className="mt-6 font-display text-[clamp(1.35rem,3vw,2.2rem)] leading-[1.3] tracking-tight">
+              Olum is for founders, coaches, consultants, creators, educators, business owners, and
+              personal brands that want to{" "}
+              <span className="text-teal-ink">post regularly without managing a content team.</span>
+            </p>
+          </Reveal>
+        </div>
+        <div className="mt-14 space-y-3">
+          <Marquee items={WHO_TOP} durationSeconds={40} />
+          <Marquee items={WHO_BOTTOM} durationSeconds={46} reverse />
+        </div>
+      </section>
+
+      {/* ── The part a person always does ─────────────────────────────── */}
+      <section className="mx-auto max-w-7xl border-t border-subtle px-6 py-24 lg:py-32">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
@@ -122,13 +167,12 @@ export default function Home() {
             <RevealLines
               as="h2"
               className="font-serif text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.1] tracking-tight"
-              lines={["A person watches", "every single cut", "before you do."]}
+              lines={["A person watches", "every single cut", "before it goes out."]}
             />
             <Reveal delay={200}>
               <p className="mt-8 max-w-readable text-[15px] leading-relaxed text-muted">
-                Nothing generated goes straight to your inbox. An editor on our team reviews the
-                take, trims it, fixes what the model got wrong and signs it off. That is the
-                difference between a video you publish and a video you delete.
+                The agents do the work; an editor on our team checks it. Every video is reviewed,
+                trimmed and signed off by a person before it is posted under your name.
               </p>
             </Reveal>
             <Reveal delay={280}>
@@ -144,6 +188,52 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Frequently asked questions ────────────────────────────────── */}
+      <section
+        id="faq"
+        className="scroll-mt-24 border-t border-subtle"
+        aria-labelledby="faq-heading"
+      >
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-24 lg:grid-cols-12 lg:gap-16 lg:py-32">
+          <div className="lg:col-span-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">FAQ</p>
+            <h2
+              id="faq-heading"
+              className="mt-4 font-serif text-[clamp(1.9rem,4vw,3.1rem)] leading-[1.1] tracking-tight"
+            >
+              Frequently asked questions
+            </h2>
+          </div>
+
+          {/* <details>, not a hand-built accordion: keyboard, screen readers
+              and find-in-page all work with no script, and the answers are in
+              the HTML for anyone who never clicks. */}
+          <div className="divide-y divide-subtle border-y border-subtle lg:col-span-7">
+            {FAQ.map(({ q, a }, i) => (
+              <details key={q} className="group py-1" open={i === 0}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[17px] text-ink [&::-webkit-details-marker]:hidden">
+                  {q}
+                  <span
+                    aria-hidden
+                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-subtle transition-transform duration-300 ease-luxe group-open:rotate-45"
+                  >
+                    <span className="absolute h-px w-3 bg-ink" />
+                    <span className="absolute h-3 w-px bg-ink" />
+                  </span>
+                </summary>
+                <p className="max-w-readable pb-6 pr-12 text-[15px] leading-relaxed text-muted">
+                  {a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
+        {/* The same five questions, for search engines. Built from FAQ above,
+            so the page and the structured data cannot drift apart. */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_SCHEMA }} />
+      </section>
+
+      {/* ── The ask ───────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-t border-subtle">
         <div
           aria-hidden
@@ -158,19 +248,22 @@ export default function Home() {
             as="h2"
             className="mx-auto font-serif text-[clamp(2.2rem,6vw,4.4rem)] leading-[1.04] tracking-tight"
             lines={[
-              "Sit down once.",
-              <span className="text-spectrum">
-                We will handle the rest.
-              </span>,
+              "Share your knowledge.",
+              <span className="text-spectrum">Olum handles the content.</span>,
             ]}
           />
+          <Reveal delay={160}>
+            <p className="mx-auto mt-6 max-w-readable text-[16px] leading-relaxed text-muted">
+              From idea to published video, Olum manages everything.
+            </p>
+          </Reveal>
           <Reveal delay={220}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Link
                 to="/get-started"
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
               >
-                Open the app
+                Get Started With Olum
                 <span aria-hidden>→</span>
               </Link>
               <Link

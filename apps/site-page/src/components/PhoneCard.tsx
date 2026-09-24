@@ -151,12 +151,12 @@ export function PhoneCard({ clip, className = "" }: { clip: PhoneClip; className
     <div className="overflow-hidden rounded-[22px] bg-paper">
       {/* ── What this is: the loudest thing on the card ─────────────────── */}
       {generated ? (
-        <p className="flex items-center justify-center gap-1.5 bg-spectrum px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-paper sm:text-[11px]">
+        <p className="flex items-center justify-center gap-1.5 bg-spectrum px-3 py-2 font-mono text-[8.5px] font-semibold uppercase tracking-[0.08em] text-paper sm:text-[11px] sm:tracking-[0.16em]">
           <SparkGlyph />
           AI-generated
         </p>
       ) : (
-        <p className="flex items-center justify-center gap-2 bg-ink px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-paper sm:text-[11px]">
+        <p className="flex items-center justify-center gap-2 bg-ink px-3 py-2 font-mono text-[8.5px] font-semibold uppercase tracking-[0.08em] text-paper sm:text-[11px] sm:tracking-[0.16em]">
           <span className="relative flex h-2 w-2">
             <span className="pulse-dot absolute inset-0 rounded-full bg-flare" />
             <span className="relative h-2 w-2 rounded-full bg-flare" />

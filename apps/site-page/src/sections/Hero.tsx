@@ -195,7 +195,7 @@ function PinnedHero() {
                   to={CTA_PRIMARY}
                   className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
                 >
-                  Open the app
+                  Get started
                   <span aria-hidden>→</span>
                 </Link>
               </Magnetic>
@@ -267,7 +267,7 @@ function StaticHero() {
           to={CTA_PRIMARY}
           className="rounded-full bg-ink px-6 py-3 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
         >
-          Open the app
+          Get started
         </Link>
         <a
           href={CTA_SECONDARY}

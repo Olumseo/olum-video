@@ -102,14 +102,14 @@ export default function Shell({
                 {item.label}
               </Link>
             ))}
-            {/* Every "Open the app" goes to the sign-up form for now: the app
+            {/* Every "Get started" goes to the sign-up form: the app
                 is not open for self-serve yet, so the next step for a visitor
                 is to leave verified details and be contacted. */}
                         <Link
               to="/get-started"
               className="hidden shrink-0 rounded-full bg-ink px-5 py-2 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)] sm:inline-flex"
             >
-              Open the app
+              Get started
             </Link>
           </nav>
         </div>
@@ -136,7 +136,7 @@ export default function Shell({
               Pricing
             </Link>
             <Link to="/get-started" className="link-underline text-muted hover:text-ink">
-              Open the app
+              Get started
             </Link>
             <a href="/" className="link-underline text-muted hover:text-ink">
               olum.ai

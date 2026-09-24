@@ -60,7 +60,7 @@ export function Inside() {
               to="/get-started"
               className="link-underline mt-8 inline-flex items-center gap-2 text-sm text-ink"
             >
-              Open the app
+              Get started
               <span aria-hidden>→</span>
             </Link>
           </Reveal>

@@ -24,7 +24,7 @@ export default function App() {
         <Route path="/results" element={<Results />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/pricing" element={<Pricing />} />
-        {/* Where every "Open the app" and "Create my AI clone" leads. */}
+        {/* Where every "Get started" and "Create my AI clone" leads. */}
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

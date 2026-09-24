@@ -1,5 +1,5 @@
 /**
- * How it works, in four cards.
+ * How Olum works, in five cards: share, create, post, track, improve.
  *
  * Each card carries a small mock of the thing it describes rather than an
  * icon. An icon says "this step exists"; a picture of the actual screen says
@@ -42,38 +42,7 @@ function UploadMock() {
   );
 }
 
-/** ── 02 ─ what you do ────────────────────────────────────────────────────── */
-const TOPICS = ["AI tools", "Small business", "Productivity", "Education"];
-
-function TopicsMock() {
-  return (
-    <div className="rounded-[14px] border border-subtle bg-paper p-4 shadow-[0_14px_34px_-26px_rgb(var(--ink-rgb)/0.5)]">
-      <p className="text-[12px] text-muted">What do you do?</p>
-      <p className="mt-2 truncate rounded-[9px] border border-subtle bg-cream/50 px-2.5 py-2 text-[12px] text-ink">
-        I help small businesses use AI…
-      </p>
-      <ul className="mt-3 flex flex-wrap gap-1.5">
-        {TOPICS.map((topic, i) => (
-          <li
-            key={topic}
-            className={`rounded-full border px-2.5 py-1 text-[11px] ${
-              i === 0
-                ? "border-accent-ink/40 bg-accent/10 text-accent-ink"
-                : "border-subtle text-muted"
-            }`}
-          >
-            {topic}
-          </li>
-        ))}
-        <li className="rounded-full border border-dashed border-subtle px-2.5 py-1 text-[11px] text-muted">
-          +
-        </li>
-      </ul>
-    </div>
-  );
-}
-
-/** ── 03 ─ the output ─────────────────────────────────────────────────────── */
+/** ── 02 ─ the output ─────────────────────────────────────────────────────── */
 function OutputMock() {
   const shots = [
     { src: `${base}media/generated-astra.jpg`, time: "0:57" },
@@ -106,153 +75,159 @@ function OutputMock() {
   );
 }
 
-/** ── 04 ─ the human edit ─────────────────────────────────────────────────── */
-function EditMock() {
-  const checks = ["Take trimmed", "Captions timed", "Audio levelled"];
+/** ── 03 ─ posting ────────────────────────────────────────────────────────── */
+const POSTED = [
+  { name: "Instagram", when: "9:00" },
+  { name: "LinkedIn", when: "9:05" },
+  { name: "TikTok", when: "9:10" },
+];
+
+function PostMock() {
   return (
-    <div className="w-full rounded-[14px] border border-subtle bg-paper p-4 shadow-[0_14px_34px_-26px_rgb(var(--ink-rgb)/0.5)]">
-      <p className="flex items-center gap-2 text-[11.5px] text-ink">
-        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent-ink" />
-        An editor has this
-      </p>
-
-      {/* A cut timeline. Three clips and a playhead is the least drawing that
-          still reads unmistakably as "someone is editing this", and it is the
-          one picture on the page that shows work being done BY A PERSON
-          rather than by the product. */}
-      <span aria-hidden className="mt-3 flex h-7 items-stretch gap-1">
-        <span className="w-[42%] rounded-[5px] bg-accent-ink/25" />
-        <span className="w-[26%] rounded-[5px] bg-teal-ink/25" />
-        <span className="w-[32%] rounded-[5px] bg-violet-ink/25" />
-      </span>
-      <span aria-hidden className="mt-1.5 block h-px w-full bg-ink/10" />
-
-      <ul className="mt-3 space-y-1.5">
-        {checks.map((check) => (
-          <li key={check} className="flex items-center gap-2 text-[11px] text-muted">
-            <span
-              aria-hidden
-              className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-success-ink text-paper"
-            >
-              <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
-                <path
-                  d="M1.5 5.2 3.9 7.6 8.5 2.6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            {check}
-          </li>
-        ))}
+    <div className="w-full rounded-[14px] border border-subtle bg-paper p-3.5 shadow-[0_14px_34px_-26px_rgb(var(--ink-rgb)/0.5)]">
+      <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Today</p>
+      <ul className="mt-2 space-y-1.5">
+        {POSTED.map((post) => {
+          const platform = PLATFORMS.find((p) => p.name === post.name);
+          return (
+            <li key={post.name} className="flex items-center gap-2 text-[11.5px] text-ink">
+              <Tick />
+              {platform && <PlatformMark platform={platform} size={12} />}
+              {post.name}
+              <span className="ml-auto font-mono text-[10px] text-muted">{post.when}</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-/** ── 05 ─ approval ───────────────────────────────────────────────────────── */
-function ApproveMock() {
+/** ── 04 ─ tracking ───────────────────────────────────────────────────────── */
+const BARS = [22, 30, 26, 38, 34, 48, 44, 58, 54, 70];
+
+function TrackMock() {
   return (
-    <div className="rounded-[14px] border border-subtle bg-paper p-4 shadow-[0_14px_34px_-26px_rgb(var(--ink-rgb)/0.5)]">
-      <ul className="flex items-center gap-3 text-ink">
-        {PLATFORMS.map((platform) => (
-          <li key={platform.name}>
-            <PlatformMark platform={platform} size={17} />
-          </li>
+    <div className="w-full rounded-[14px] border border-subtle bg-paper p-4 shadow-[0_14px_34px_-26px_rgb(var(--ink-rgb)/0.5)]">
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          ["Views", "12.4k"],
+          ["Watch", "71%"],
+          ["Saves", "318"],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted">{label}</p>
+            <p className="mt-0.5 font-display text-[15px] text-ink">{value}</p>
+          </div>
         ))}
-      </ul>
-
-      <div className="mt-4 space-y-2">
-        <p className="flex items-center gap-2 rounded-[9px] border border-accent-ink/35 bg-accent/10 px-2.5 py-2 text-[11.5px] text-ink">
-          <span
-            aria-hidden
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success-ink text-paper"
-          >
-            <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-              <path
-                d="M1.5 5.2 3.9 7.6 8.5 2.6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          Approve before posting
-        </p>
-        {/* Labelled as upcoming rather than as a switch you can flip today.
-            Drawing an option the product does not have is the difference
-            between a mock and a promise. */}
-        <p className="flex items-center gap-2 rounded-[9px] border border-subtle px-2.5 py-2 text-[11.5px] text-muted">
-          <span aria-hidden className="h-4 w-4 shrink-0 rounded-full border border-subtle" />
-          Auto-publish
-          <span className="ml-auto shrink-0 rounded-full border border-subtle px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider">
-            Soon
-          </span>
-        </p>
       </div>
+      {/* Bars rather than a path: ten divs survive every restyle, and the
+          only thing this needs to say is "the line goes up". */}
+      <span aria-hidden className="mt-3 flex h-14 items-end gap-[3px]">
+        {BARS.map((h, i) => (
+          <span
+            key={i}
+            className={`flex-1 rounded-t-[3px] ${i === BARS.length - 1 ? "bg-spectrum-v" : "bg-teal-ink/30"}`}
+            style={{ height: `${h}%` }}
+          />
+        ))}
+      </span>
+    </div>
+  );
+}
 
-      <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-[11.5px] text-paper">
-        Start posting
-        <span aria-hidden>→</span>
+/** ── 05 ─ improving ──────────────────────────────────────────────────────── */
+function ImproveMock() {
+  return (
+    <div className="w-full rounded-[14px] border border-subtle bg-paper p-4 shadow-[0_14px_34px_-26px_rgb(var(--ink-rgb)/0.5)]">
+      <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Next week</p>
+      <ul className="mt-2.5 space-y-1.5 text-[11.5px]">
+        <li className="flex items-center gap-2 text-ink">
+          <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-success-ink" />
+          More of: question hooks
+        </li>
+        <li className="flex items-center gap-2 text-ink">
+          <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-success-ink" />
+          Topic: AI tools for clinics
+        </li>
+        <li className="flex items-center gap-2 text-muted line-through decoration-ink/30">
+          <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-ink/25" />
+          Long intros
+        </li>
+      </ul>
+      <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-spectrum px-2.5 py-1 text-[10.5px] text-paper">
+        Learned from 30 posts
       </p>
     </div>
+  );
+}
+
+function Tick() {
+  return (
+    <span
+      aria-hidden
+      className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-success-ink text-paper"
+    >
+      <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
+        <path
+          d="M1.5 5.2 3.9 7.6 8.5 2.6"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
   );
 }
 
 /**
- * Five steps, not four.
- *
- * The edit used to be half a clause inside "Olum makes the content" — the word
- * "edits" in a list of six things the software does. That is the opposite of
- * what this product is: the human pass is the reason a cut is publishable, and
- * burying it in a sentence about automation gave it away to every competitor
- * who does not have one. It is now its own numbered step, with its own picture,
- * and it is the only card on the page wearing the spectrum edge.
+ * The five steps, in the words the home page uses everywhere: you share your
+ * videos once, and Olum does the other four — creating, posting, tracking and
+ * improving. Step 2 wears the spectrum edge because it is where all the work
+ * happens.
  */
 const STEPS = [
   {
     index: "01",
-    title: "Upload one talking video",
-    body: "Record a short video of yourself once, with consent. That is what your clone is built from — and the last time you set up a camera.",
+    title: "Share your videos",
+    body: "Send us a few videos of yourself and tell us about your business, audience, and goals.",
     mock: <UploadMock />,
   },
   {
     index: "02",
-    title: "Tell Olum what you do",
-    body: "Choose your topics, audience and brand voice, or just describe your business in a sentence.",
-    mock: <TopicsMock />,
-  },
-  {
-    index: "03",
-    title: "Olum generates the videos",
-    body: "It finds the ideas, writes the scripts in your voice and generates each video from your clone.",
+    highlight: "Where the work happens",
+    title: "Olum creates everything",
+    body: "Olum's AI agents find content ideas, research each topic, write scripts and hooks, create captions, generate your AI avatar videos and edit each one.",
     mock: <OutputMock />,
   },
   {
+    index: "03",
+    title: "Olum posts your content",
+    body: "Olum publishes the finished videos to your social media accounts.",
+    mock: <PostMock />,
+  },
+  {
     index: "04",
-    highlight: "The part that matters",
-    title: "A human editor cuts every one",
-    body: "Nothing generated goes out raw. An editor on our team trims the take, times the captions, levels the audio and fixes what the model got wrong.",
-    mock: <EditMock />,
+    title: "Olum tracks performance",
+    body: "Olum tracks views, watch time, engagement, and other performance data.",
+    mock: <TrackMock />,
   },
   {
     index: "05",
-    title: "Approve, then publish",
-    body: "It reaches you only after that pass. Approve it and it is ready for your channels — two revisions included.",
-    mock: <ApproveMock />,
+    title: "Olum improves future content",
+    body: "The agents use the performance data to improve the next topics, scripts, hooks, captions, and videos.",
+    mock: <ImproveMock />,
   },
 ];
 
 export function Steps() {
   return (
-    <section className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:pb-32" aria-label="How it works">
+    <section className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:pb-32" aria-label="How Olum works">
       <ExplainerHeading
-        eyebrow="How it works"
-        lines={["From one upload to", <span className="text-spectrum">daily posting.</span>]}
-        body="Olum turns a single recording into a repeatable content system for your socials."
+        eyebrow="How Olum works"
+        lines={["You share your videos.", <span className="text-spectrum">Olum does the rest.</span>]}
+        body="From the first idea to the performance report, every step after the first one is Olum's."
       />
 
       <ExplainerGrid items={STEPS} columns={5} mockHeight={172} className="mt-14" />
@@ -260,7 +235,7 @@ export function Steps() {
       <Reveal delay={200}>
         <div className="mt-12 flex justify-center">
           <Annotation arrow="up-left" wide className="items-center text-center">
-            And not one of these five is your job.
+            Four of these five are not your job.
           </Annotation>
         </div>
       </Reveal>

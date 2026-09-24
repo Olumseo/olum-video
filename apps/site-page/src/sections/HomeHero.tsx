@@ -80,14 +80,8 @@ const FAN: PhoneClip[] = [
   },
 ];
 
-/**
- * "Ready to post", not "Posted for you".
- *
- * Publishing straight to the platforms is the one thing in this design the
- * product cannot do yet — the step-4 mock marks it "Soon" — and three words in
- * a hero are exactly where an overstatement does the most damage.
- */
-const FACTS = ["One recording", "Daily videos", "Ready to post"];
+/** The promise in three words each: made, posted, improving. */
+const FACTS = ["Daily videos", "Posted for you", "Better every week"];
 
 export function HomeHero() {
   return (
@@ -106,13 +100,16 @@ export function HomeHero() {
         }}
       />
 
-      <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10">
+      {/* `minmax(0,1fr)` on phones too. With no column set, the single mobile
+          column sized itself to the card fan's natural width and pushed the
+          headline copy off the right edge of the screen. */}
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10">
         {/* ── Left: the claim ─────────────────────────────────────────────── */}
         <div>
           <Reveal>
             <p className="inline-flex items-center gap-2.5 rounded-full border border-subtle bg-paper/70 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted backdrop-blur-sm">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-flare" />
-              AI video autopilot
+              Your AI content team
             </p>
           </Reveal>
 
@@ -120,17 +117,19 @@ export function HomeHero() {
             as="h1"
             className="mt-7 font-serif text-[clamp(2.5rem,5.6vw,4.4rem)] leading-[1.04] tracking-tight"
             lines={[
-              "Turn one video",
-              "of yourself into",
-              <span className="text-spectrum">daily social posts.</span>,
+              "Get daily AI",
+              "avatar videos without",
+              <span className="text-spectrum">doing the work.</span>,
             ]}
           />
 
           <Reveal delay={240}>
-            <p className="mt-7 max-w-readable text-[15px] leading-relaxed text-muted">
-              Upload a video of yourself once. Olum builds your AI clone, writes the scripts, edits
-              the videos and gets them ready for your socials — with a human checking every cut
-              before it goes out.
+            <p className="mt-7 max-w-readable text-[17px] leading-relaxed text-ink">
+              Olum handles your complete content process.
+            </p>
+            <p className="mt-3 max-w-readable text-[15px] leading-relaxed text-muted">
+              Our AI agents find ideas, write scripts, create captions, generate and edit your AI
+              avatar videos, post them, track performance, and improve your future content.
             </p>
           </Reveal>
 
@@ -144,7 +143,7 @@ export function HomeHero() {
                   to="/get-started"
                   className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
                 >
-                  Create my AI clone
+                  Get Started
                   <span aria-hidden>→</span>
                 </Link>
               </Magnetic>

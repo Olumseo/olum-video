@@ -59,14 +59,14 @@ export default function HowItWorks() {
           />
           <Reveal delay={220}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              {/* Every "Open the app" goes to the sign-up form for now: the app
+              {/* Every "Get started" goes to the sign-up form: the app
                   is not open for self-serve yet, so the next step for a visitor
                   is to leave verified details and be contacted. */}
                             <Link
                 to="/get-started"
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
               >
-                Open the app
+                Get started
                 <span aria-hidden>→</span>
               </Link>
               <Link
