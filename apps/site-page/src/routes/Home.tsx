@@ -166,13 +166,13 @@ export default function Home() {
           />
           <Reveal delay={220}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <a
-                href="/video"
+              <Link
+                to="/get-started"
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
               >
                 Open the app
                 <span aria-hidden>→</span>
-              </a>
+              </Link>
               <Link
                 to="/pricing"
                 className="inline-flex items-center rounded-full border border-subtle px-7 py-3.5 text-sm transition-all duration-500 ease-luxe hover:border-ink/25 hover:bg-cream"

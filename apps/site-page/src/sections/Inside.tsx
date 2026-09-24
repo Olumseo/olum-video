@@ -14,6 +14,7 @@
  */
 
 import { Reveal, RevealLines } from "@olum-video/ui";
+import { Link } from "react-router-dom";
 
 const ROWS = [
   { title: "Why most SEO audits miss AI search", meta: "0:48 · today", state: "review" },
@@ -55,13 +56,13 @@ export function Inside() {
             </p>
           </Reveal>
           <Reveal delay={200}>
-            <a
-              href="/video"
+            <Link
+              to="/get-started"
               className="link-underline mt-8 inline-flex items-center gap-2 text-sm text-ink"
             >
               Open the app
               <span aria-hidden>→</span>
-            </a>
+            </Link>
           </Reveal>
         </div>
 

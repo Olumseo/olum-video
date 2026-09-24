@@ -276,6 +276,29 @@
   }
 }
 
+/* The "sound on" bars under a playing showcase tile. Height is animated on
+   three 2px bars, which is cheap; under reduced motion they simply stand
+   still at mid height and still read as "sound". */
+.sound-bar {
+  height: 55%;
+  animation: sound-bar 900ms ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-bar {
+    animation: none;
+  }
+}
+
+@keyframes sound-bar {
+  from {
+    height: 25%;
+  }
+  to {
+    height: 100%;
+  }
+}
+
 @keyframes cue {
   0% {
     transform: scaleY(0);

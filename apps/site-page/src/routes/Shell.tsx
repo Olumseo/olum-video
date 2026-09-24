@@ -102,15 +102,15 @@ export default function Shell({
                 {item.label}
               </Link>
             ))}
-            {/* Plain <a>: /video is a separate application with its own
-                bundle. A react-router <Link> would search this app's route
-                table, miss, and render this app's 404. */}
-            <a
-              href="/video"
+            {/* Every "Open the app" goes to the sign-up form for now: the app
+                is not open for self-serve yet, so the next step for a visitor
+                is to leave verified details and be contacted. */}
+                        <Link
+              to="/get-started"
               className="hidden shrink-0 rounded-full bg-ink px-5 py-2 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)] sm:inline-flex"
             >
               Open the app
-            </a>
+            </Link>
           </nav>
         </div>
       </header>
@@ -126,15 +126,18 @@ export default function Shell({
             </p>
           </div>
           <div className="flex flex-wrap gap-6 text-sm">
+            <Link to="/results" className="link-underline text-muted hover:text-ink">
+              Results
+            </Link>
             <Link to="/how-it-works" className="link-underline text-muted hover:text-ink">
               How it works
             </Link>
             <Link to="/pricing" className="link-underline text-muted hover:text-ink">
               Pricing
             </Link>
-            <a href="/video" className="link-underline text-muted hover:text-ink">
+            <Link to="/get-started" className="link-underline text-muted hover:text-ink">
               Open the app
-            </a>
+            </Link>
             <a href="/" className="link-underline text-muted hover:text-ink">
               olum.ai
             </a>

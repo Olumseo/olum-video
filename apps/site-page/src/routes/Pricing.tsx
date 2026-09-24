@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Reveal, RevealLines } from "@olum-video/ui";
 
 import { Annotation, Sparkle, StepBadge } from "../components/Marks";
@@ -105,8 +106,8 @@ export default function Pricing() {
                   above it comes from the wrapper's padding, not a margin —
                   a margin here would fight `mt-auto`. */}
               <div className="mt-auto pt-10">
-                <a
-                  href="/video"
+                <Link
+                  to="/get-started"
                   className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm transition-colors ${
                     plan.featured
                       ? "bg-ink text-paper hover:bg-accent-2"
@@ -115,7 +116,7 @@ export default function Pricing() {
                 >
                   Get started
                   <span aria-hidden>→</span>
-                </a>
+                </Link>
               </div>
             </div>
           </Reveal>

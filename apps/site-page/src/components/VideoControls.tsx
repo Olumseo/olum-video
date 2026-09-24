@@ -21,6 +21,14 @@
  * Keyboard handling is bound to the OWNING ELEMENT, not the document — there
  * are three of these on the page at once and document-level shortcuts would
  * have all three responding to one key press.
+ *
+ * IT GETS OUT OF THE WAY WHILE YOU WATCH
+ * --------------------------------------
+ * These clips carry burned-in captions, and a bar parked over the bottom of
+ * the frame for the whole playback covers them. So while the video plays, the
+ * bar shows only when the pointer is over the tile or focus is inside it —
+ * the way every video player behaves. Paused, it stays up. On a touch screen
+ * (no hover) it also stays up, because there is no pointer to summon it with.
  */
 
 import { useEffect, useState } from "react";
@@ -142,7 +150,11 @@ export function VideoControls({
   return (
     <div
       className={`absolute inset-x-0 bottom-0 z-20 rounded-b-card bg-gradient-to-t from-panel via-panel/85 to-transparent px-3.5 pb-3.5 pt-10 transition-all duration-500 ease-luxe sm:px-4 sm:pb-4 ${
-        visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
+        !visible
+          ? "pointer-events-none translate-y-3 opacity-0"
+          : playing
+            ? "translate-y-0 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/tile:opacity-100 group-focus-within/tile:opacity-100"
+            : "translate-y-0 opacity-100"
       }`}
     >
       <div className="relative flex h-4 items-center">

@@ -21,6 +21,7 @@ import { STAGES } from "../motion/shapes";
 import { RevealLines, useReducedMotion, useScrollProgress } from "@olum-video/ui";
 
 import { Magnetic } from "../components/Magnetic";
+import { Link } from "react-router-dom";
 
 /**
  * Deadband around a stage boundary, as a fraction of the section's scroll.
@@ -40,7 +41,7 @@ const HYSTERESIS = 0.02;
  */
 const EXIT_START = 0.9;
 
-const CTA_PRIMARY = "/video";
+const CTA_PRIMARY = "/get-started";
 const CTA_SECONDARY = "/video/welcome/pricing";
 
 export function Hero() {
@@ -190,13 +191,13 @@ function PinnedHero() {
                   inside THIS app's table, find nothing, and render this app's
                   404. A real anchor makes the browser fetch the other app. */}
               <Magnetic>
-                <a
-                  href={CTA_PRIMARY}
+                <Link
+                  to={CTA_PRIMARY}
                   className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
                 >
                   Open the app
                   <span aria-hidden>→</span>
-                </a>
+                </Link>
               </Magnetic>
               <Magnetic>
                 <a
@@ -262,12 +263,12 @@ function StaticHero() {
       </h1>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        <a
-          href={CTA_PRIMARY}
+        <Link
+          to={CTA_PRIMARY}
           className="rounded-full bg-ink px-6 py-3 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
         >
           Open the app
-        </a>
+        </Link>
         <a
           href={CTA_SECONDARY}
           className="rounded-full border border-subtle px-6 py-3 text-sm transition-all duration-500 ease-luxe hover:border-ink/25 hover:bg-cream"

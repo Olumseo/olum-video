@@ -59,16 +59,16 @@ export default function HowItWorks() {
           />
           <Reveal delay={220}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              {/* Plain <a>: /video is a separate application with its own
-                  bundle. A react-router <Link> would search this app's route
-                  table, miss, and render this app's 404. */}
-              <a
-                href="/video"
+              {/* Every "Open the app" goes to the sign-up form for now: the app
+                  is not open for self-serve yet, so the next step for a visitor
+                  is to leave verified details and be contacted. */}
+                            <Link
+                to="/get-started"
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
               >
                 Open the app
                 <span aria-hidden>→</span>
-              </a>
+              </Link>
               <Link
                 to="/"
                 className="inline-flex items-center gap-2 rounded-full border border-subtle px-7 py-3.5 text-sm transition-all duration-500 ease-luxe hover:border-ink/25 hover:bg-cream"
