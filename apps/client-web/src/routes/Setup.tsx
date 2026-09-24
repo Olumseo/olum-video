@@ -15,6 +15,10 @@
  *   3. Gives them the one action that is theirs to take, when there is one —
  *      confirming the setup, or asking for the twin.
  *
+ * It is also the twin's ONE home, before and after it exists: request it,
+ * send a recording, see what is ready. Settings shows the twin read-only and
+ * links here, so there is never a second button for the same thing.
+ *
  * It reads the server's `blocker` rather than deriving its own. Two
  * implementations of the same gate drift, and the failure is a button this page
  * offers that the API then refuses.
@@ -23,9 +27,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, isMockApi, setMockReadiness, type Blocker, type Readiness } from "@olum-video/api-client";
-import { Reveal } from "@olum-video/ui";
+import { Badge, Reveal } from "@olum-video/ui";
 
 import { useAsync } from "../lib/useAsync";
+import { TwinRecordingUpload } from "../components/TwinRecordingUpload";
 
 /**
  * The path, in the order the client walks it.
@@ -117,7 +122,9 @@ export default function Setup() {
         <h1 className="mt-4 font-display text-[clamp(1.9rem,5vw,3rem)] leading-[1.12] tracking-tight">
           {data.blocker === "no_entitlement"
             ? "Video isn't on your plan yet"
-            : "Almost there."}
+            : data.ready
+              ? "You're all set."
+              : "Almost there."}
         </h1>
         <p className="mt-4 max-w-readable text-[15px] leading-relaxed text-muted">
           {data.message ||
@@ -146,6 +153,9 @@ export default function Setup() {
                   key={step.blocker}
                   index={i}
                   step={step}
+                  // Once the twin is asked for, the next move is ours — the
+                  // row stops saying "over to you" to someone who already did.
+                  requested={step.blocker === "awaiting_digital_twin" && data.twin_requested}
                   state={
                     data[DONE_FLAG[step.blocker]]
                       ? "done"
@@ -161,6 +171,12 @@ export default function Setup() {
           <Reveal delay={160}>
             <Action readiness={data} onDone={retry} />
           </Reveal>
+
+          {data.ready && (
+            <Reveal delay={220}>
+              <TwinCard />
+            </Reveal>
+          )}
         </>
       )}
     </div>
@@ -180,10 +196,12 @@ function Step({
   index,
   step,
   state,
+  requested = false,
 }: {
   index: number;
   step: (typeof STEPS)[number];
   state: "done" | "active" | "waiting";
+  requested?: boolean;
 }) {
   return (
     <li
@@ -225,7 +243,7 @@ function Step({
           </h2>
           {state === "active" && (
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent-ink">
-              {step.who === "you" ? "over to you" : "in progress"}
+              {requested ? "requested" : step.who === "you" ? "over to you" : "in progress"}
             </span>
           )}
           {state === "done" && (
@@ -251,15 +269,13 @@ function Action({ readiness, onDone }: { readiness: Readiness; onDone: () => voi
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
-  const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(fn: () => Promise<unknown>, after?: string) {
+  async function run(fn: () => Promise<unknown>) {
     setError(null);
     setBusy(true);
     try {
       await fn();
-      if (after) setNote(after);
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : "That didn't work. Try again?");
@@ -327,26 +343,53 @@ function Action({ readiness, onDone }: { readiness: Readiness; onDone: () => voi
   }
 
   if (readiness.blocker === "awaiting_digital_twin") {
+    // Read from the SERVER. This used to be a note in component state, and the
+    // reload that follows every action threw it away — so after asking, the
+    // client saw the same "Request my twin" button as before, and reasonably
+    // concluded nothing had happened. The ticket had been created all along.
+    const asked = readiness.twin_requested;
     return (
-      <Panel
-        kicker="Your turn"
-        heading="Let's record your twin."
-        body="One session, about twenty minutes, and you never need a camera again. An executive will get in touch to arrange it."
-      >
-        <button
-          disabled={busy}
-          onClick={() =>
-            run(() => api.requestTwin(), "Asked. Someone will be in touch shortly.")
+      <>
+        <Panel
+          kicker={asked ? "Requested" : "Your turn"}
+          heading={asked ? "We're on it." : "Let's record your twin."}
+          body={
+            asked
+              ? "An executive has your request and will get in touch to book the session — about twenty minutes, once, and you never need a camera again."
+              : "One session, about twenty minutes, and you never need a camera again. An executive will get in touch to arrange it."
           }
-          className="rounded-full bg-paper px-6 py-3 text-sm text-ink transition-opacity hover:opacity-90 disabled:opacity-40"
         >
-          {busy ? "Asking…" : note ? "Requested" : "Request my twin"}
-        </button>
-        {note && <p className="mt-3 w-full text-[13px] text-paper/70">{note}</p>}
-        {error && <p className="mt-3 w-full text-[13px] text-flare">{error}</p>}
-      </Panel>
+          {asked ? (
+            <p className="flex items-center gap-2.5 text-[13px] text-paper/80">
+              <span aria-hidden className="pulse-dot h-1.5 w-1.5 rounded-full bg-spectrum" />
+              Waiting for us — nothing more to do right now.
+            </p>
+          ) : (
+            <button
+              disabled={busy}
+              onClick={() => run(() => api.requestTwin())}
+              className="rounded-full bg-paper px-6 py-3 text-sm text-ink transition-opacity hover:opacity-90 disabled:opacity-40"
+            >
+              {busy ? "Asking…" : "Request my twin"}
+            </button>
+          )}
+          {error && <p className="mt-3 w-full text-[13px] text-flare">{error}</p>}
+        </Panel>
+
+        <div className="mt-6 rounded-card border border-subtle bg-paper px-6 py-5">
+          <p className="text-[14px] text-ink">Already have a clip of you talking to camera?</p>
+          <p className="mt-1 text-[13px] text-muted">
+            Send it and we&rsquo;ll start from that — the session gets shorter.
+          </p>
+          <div className="mt-4">
+            <TwinRecordingUpload />
+          </div>
+        </div>
+      </>
     );
   }
+
+  if (readiness.ready) return null;
 
   // Everything outstanding is ours. Say who is doing it and stop there —
   // inventing a completion time we have not committed to would be worse than
@@ -359,6 +402,56 @@ function Action({ readiness, onDone }: { readiness: Readiness; onDone: () => voi
       <p className="mt-1 text-[13px] text-muted">
         We&rsquo;ll email you the moment it&rsquo;s your turn.
       </p>
+    </div>
+  );
+}
+
+/**
+ * The twin, once it exists: what is ready, and how to replace it.
+ *
+ * Replacing a twin needs a new consent recording, so the upload lives here
+ * too — the same home as asking for the first one.
+ */
+function TwinCard() {
+  const { data } = useAsync(() => api.getAccount());
+  if (!data) return null;
+
+  const rows = [
+    ...data.avatars.map((a) => ({ kind: "Avatar", ...a })),
+    ...data.voices.map((v) => ({ kind: "Voice", ...v })),
+  ];
+
+  return (
+    <div className="mt-12 rounded-card border border-subtle bg-paper px-6 py-6">
+      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
+        Your digital twin
+      </p>
+      <ul className="mt-4 space-y-2.5">
+        {rows.map((row) => (
+          <li key={row.id} className="flex items-center justify-between gap-4">
+            <span className="text-[14px] text-ink">
+              <span className="mr-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+                {row.kind}
+              </span>
+              {row.name}
+            </span>
+            <Badge
+              tone={row.status === "ready" ? "good" : row.status === "failed" ? "bad" : "progress"}
+            >
+              {row.status}
+            </Badge>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6 border-t border-subtle pt-5">
+        <p className="text-[13px] text-muted">
+          Want a new look or voice? Replacing a twin needs a fresh recording — send one and your
+          account manager will take it from there.
+        </p>
+        <div className="mt-4">
+          <TwinRecordingUpload />
+        </div>
+      </div>
     </div>
   );
 }

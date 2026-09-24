@@ -34,6 +34,8 @@ import type {
   EditorAssignment,
   EditorWorkload,
   QueueCounts,
+  PublishVideoRequest,
+  Lead,
   Me,
 } from "./types";
 import type { Api } from "./mock/client";
@@ -192,6 +194,18 @@ export const httpApi: Api = {
     ),
 
   listTickets: () => get<Ticket[]>("/staff/tickets"),
+
+  // Every video in the caller's organisation. NOT listVideos, which is the
+  // signed-in person's own client account.
+  listStaffVideos: () => get<Video[]>("/staff/videos"),
+
+  // Landing-page sign-ups — olum's staff only.
+  listLeads: () => get<Lead[]>("/staff/leads"),
+  markLeadContacted: (id: string) =>
+    post<{ status: string }>(`/staff/leads/${encodeURIComponent(id)}/contacted`, {}, newIdempotencyKey()),
+
+  publishVideo: (id: string, req: PublishVideoRequest) =>
+    post<Video>(`/staff/videos/${encodeURIComponent(id)}/publish`, req, newIdempotencyKey()),
   listClients: () => get<StaffClient[]>("/staff/clients"),
 
   // ── onboarding, twins and briefs ──────────────────────────────────────────

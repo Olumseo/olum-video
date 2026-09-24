@@ -158,3 +158,23 @@ export function presentBrief(status: string, audience: "client" | "staff"): Brie
   const table = audience === "client" ? BRIEF_CLIENT : BRIEF_STAFF;
   return table[status] ?? BRIEF_UNKNOWN;
 }
+
+// ── platforms ────────────────────────────────────────────────────────────────
+
+/**
+ * Where a video can go live, as people write it.
+ *
+ * One table for both apps: the staff member picks "Instagram" and the client
+ * reads "Live on Instagram" — the same word on both sides of the handoff.
+ */
+export const PLATFORMS = [
+  { id: "instagram", name: "Instagram" },
+  { id: "youtube", name: "YouTube" },
+  { id: "linkedin", name: "LinkedIn" },
+  { id: "tiktok", name: "TikTok" },
+  { id: "x", name: "X" },
+] as const;
+
+export function platformName(id: string): string {
+  return PLATFORMS.find((p) => p.id === id)?.name ?? id;
+}

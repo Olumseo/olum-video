@@ -11,6 +11,8 @@ import BriefReview from "./routes/BriefReview";
 import MyWork from "./routes/MyWork";
 import Team from "./routes/Team";
 import Join from "./routes/Join";
+import Publish from "./routes/Publish";
+import Leads from "./routes/Leads";
 
 // One app, not two. `staff_role` already models editor as a ROLE rather than an
 // identity, so account managers and editors differ only in which rows they see.
@@ -33,6 +35,10 @@ const NAV = [
   { to: "/", label: "Queue" },
   { to: "/clients", label: "Clients" },
   { to: "/edits", label: "Edit queue" },
+  // Last step of the pipeline: approved by the client, not yet live.
+  { to: "/publish", label: "Publish" },
+  // Landing-page sign-ups waiting for a call. Olum's staff only.
+  { to: "/leads", label: "Sign-ups" },
   { to: "/team", label: "Team" },
 ];
 
@@ -59,6 +65,8 @@ export default function App() {
                 <Route path="/briefs" element={<BriefReview />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/edits" element={<EditQueue />} />
+                <Route path="/publish" element={<Publish />} />
+                <Route path="/leads" element={<Leads />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

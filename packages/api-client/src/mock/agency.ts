@@ -218,6 +218,8 @@ export const agencyMock = {
       videos_to_produce: 4,
       my_assignments: assignments.length,
       unassigned: 2,
+      ready_to_publish: 1,
+      new_leads: 2,
     };
   },
 };

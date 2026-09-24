@@ -15,7 +15,7 @@
 
 import { Link } from "react-router-dom";
 import { api, type EditorAssignment } from "@olum-video/api-client";
-import { EmptyState, ErrorState, LoadingRows, presentStatus, relativeTime } from "@olum-video/ui";
+import { ErrorState, LoadingRows, presentStatus, relativeTime } from "@olum-video/ui";
 
 import { useAsync } from "../lib/useAsync";
 

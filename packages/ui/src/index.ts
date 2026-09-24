@@ -22,5 +22,11 @@ export { DevBadge } from "./auth/DevBadge";
 export { Reveal, RevealLines } from "./motion/Reveal";
 export { useInView, useReducedMotion, useScrollProgress, useScrolled } from "./motion/hooks";
 
-export { presentStatus, presentBrief, type BriefPresentation } from "./status";
+export {
+  presentStatus,
+  presentBrief,
+  platformName,
+  PLATFORMS,
+  type BriefPresentation,
+} from "./status";
 export { relativeTime, duration, formatBytes } from "./format";

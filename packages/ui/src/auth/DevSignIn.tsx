@@ -65,7 +65,12 @@ const PERSONAS: { id: string; label: string; detail: string }[] = [
   {
     id: "33333333-3333-3333-3333-333333333333",
     label: "Ready client",
-    detail: "Onboarded, twin ready — the everyday product",
+    detail: "Arjun, daily AI news — a cut waiting on him, a script to OK, videos live",
+  },
+  {
+    id: "cccccccc-0000-4000-8000-000000000001",
+    label: "Ready client — news desk",
+    detail: "Kabir, world affairs — one video approved and waiting to go live",
   },
   {
     id: "dddddddd-0000-4000-8000-000000000001",
@@ -80,7 +85,7 @@ const PERSONAS: { id: string; label: string; detail: string }[] = [
   {
     id: "dddddddd-0000-4000-8000-000000000003",
     label: "Needs a twin",
-    detail: "Active, no avatar or voice yet",
+    detail: "Active, no twin yet — request one and watch it reach the staff queue",
   },
   {
     id: "eeeeeeee-0000-4000-8000-000000000009",
@@ -95,7 +100,7 @@ const PERSONAS: { id: string; label: string; detail: string }[] = [
   {
     id: "aaaaaaaa-0000-4000-8000-000000000001",
     label: "Agency owner",
-    detail: "Northwind Agency — manages a team and their own clients",
+    detail: "Northwind Media — manages a team and their own clients",
   },
   {
     id: "aaaaaaaa-0000-4000-8000-000000000002",
@@ -105,7 +110,7 @@ const PERSONAS: { id: string; label: string; detail: string }[] = [
   {
     id: "aaaaaaaa-0000-4000-8000-000000000003",
     label: "An agency's client",
-    detail: "Signed up through Northwind, so their work goes to Northwind",
+    detail: "Maya, future of work — signed up through Northwind, so her work goes there",
   },
 ];
 

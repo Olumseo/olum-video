@@ -1,6 +1,13 @@
 /**
  * The provisioning queue: clients who have paid and cannot yet use anything.
  *
+ * Two kinds of row, because there are two things a paying client can be stuck
+ * on: their accounts (mailbox, studio account, verification, their check), or
+ * — after all that — the digital twin they asked for. The twin rows used to
+ * be missing entirely: asking for a twin happens AFTER a client is active,
+ * and this list only showed clients who were not. The request opened two
+ * tickets and then no screen offered the buttons that close them.
+ *
  * This is the most time-sensitive screen in the staff portal. Everyone on it
  * is a paying customer looking at a page that says "almost there", so the
  * design decisions all point the same way:
@@ -36,7 +43,7 @@ export default function Onboarding() {
     );
   }
 
-  const overdue = data.filter((c) => hoursSince(c.CreatedAt) >= OVERDUE_HOURS).length;
+  const overdue = data.filter((c) => hoursSince(c.WaitingSince) >= OVERDUE_HOURS).length;
 
   return (
     <div>
@@ -55,7 +62,8 @@ export default function Onboarding() {
       </div>
 
       <p className="mt-3 max-w-[58ch] text-sm leading-relaxed text-muted">
-        Everyone here has paid and can&rsquo;t use the product yet. Oldest first.
+        Everyone here has paid and can&rsquo;t make a video yet — waiting on their accounts, or
+        on the digital twin they asked for. Longest wait first.
       </p>
 
       <ul className="mt-8 space-y-3">
@@ -83,8 +91,10 @@ function Row({
   const [external, setExternal] = useState(client.ExternalID ?? "");
   const [ref, setRef] = useState("");
 
-  const waited = hoursSince(client.CreatedAt);
+  const waited = hoursSince(client.WaitingSince);
   const late = waited >= OVERDUE_HOURS;
+  // Active and asked for a twin: the accounts are done, only the twin is left.
+  const twinStage = client.Status === "active" && client.TwinRequested;
 
   async function run(fn: () => Promise<unknown>) {
     setError(null);
@@ -112,7 +122,8 @@ function Row({
         <div className="min-w-0">
           <h2 className="text-[15px] text-ink">{client.DisplayName}</h2>
           <p className="mt-1 font-mono text-[11px] text-muted">
-            waiting {relativeTime(client.CreatedAt).replace(" ago", "")}
+            {twinStage ? "asked for a twin " : "waiting "}
+            {relativeTime(client.WaitingSince).replace(" ago", twinStage ? " ago" : "")}
             {client.AssigneeName ? ` · ${client.AssigneeName}` : " · unclaimed"}
           </p>
         </div>
@@ -123,22 +134,40 @@ function Row({
         )}
       </div>
 
-      {/* The four steps, as a strip. A client is only ever on one of them, so
-          showing all four makes "what's left" answerable without opening
+      {/* The steps, as a strip. A client is only ever on one of them, so
+          showing them all makes "what's left" answerable without opening
           anything. */}
-      <ol className="mt-4 flex flex-wrap gap-1.5">
-        <Pip done={client.ManagedEmail != null} label="Mailbox" />
-        <Pip done={client.ExternalID != null} label="Studio account" />
-        <Pip done={verified} label="Verified" />
-        <Pip
-          done={client.Status === "awaiting_client_check" || client.Status === "active"}
-          label="With client"
-        />
-      </ol>
+      {twinStage ? (
+        <ol className="mt-4 flex flex-wrap gap-1.5">
+          <Pip done label="Accounts" />
+          <Pip done={client.AvatarReady} label="Avatar" />
+          <Pip done={client.VoiceReady} label="Voice" />
+        </ol>
+      ) : (
+        <ol className="mt-4 flex flex-wrap gap-1.5">
+          <Pip done={client.ManagedEmail != null} label="Mailbox" />
+          <Pip done={client.ExternalID != null} label="Studio account" />
+          <Pip done={verified} label="Verified" />
+          <Pip
+            done={client.Status === "awaiting_client_check" || client.Status === "active"}
+            label="With client"
+          />
+        </ol>
+      )}
 
       {error && <p className="mt-3 text-[13px] text-danger-ink">{error}</p>}
 
-      {form ? (
+      {twinStage ? (
+        <div className="mt-4">
+          <p className="max-w-[60ch] text-[13px] leading-relaxed text-muted">
+            Call them to book the recording, create the avatar and the voice in their studio
+            account, then mark each one ready. Both halves are needed before they can make a video.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <TwinButtons client={client} busy={busy} run={run} />
+          </div>
+        </div>
+      ) : form ? (
         <div className="mt-4 rounded-[12px] border border-subtle bg-cream/40 p-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <Input label="Managed email" value={email} onChange={setEmail}
@@ -205,36 +234,51 @@ function Row({
               waiting on them
             </span>
           )}
-          <TwinButtons clientId={client.ClientID} busy={busy} run={run} />
         </div>
       )}
     </li>
   );
 }
 
-/** Recording a trained twin. Two buttons because both halves are needed. */
+/**
+ * Recording a trained twin. One button per half still missing — a half that
+ * is already done has nothing left to press.
+ *
+ * Shown on twin rows ONLY. They used to sit on every row, including clients
+ * who had not been given a mailbox yet, which offered an action that made no
+ * sense at that step.
+ */
 function TwinButtons({
-  clientId,
+  client,
   busy,
   run,
 }: {
-  clientId: string;
+  client: OnboardingClient;
   busy: boolean;
   run: (fn: () => Promise<unknown>) => void;
 }) {
+  const missing = (["avatar", "voice"] as const).filter((kind) =>
+    kind === "avatar" ? !client.AvatarReady : !client.VoiceReady,
+  );
+  // Named after the client, the way it would read in their studio account.
+  const first = client.DisplayName.split(/[ ·]/)[0] ?? client.DisplayName;
   return (
     <>
-      {(["avatar", "voice"] as const).map((kind) => (
-        <button
+      {missing.map((kind) => (
+        <Action
           key={kind}
-          disabled={busy}
+          busy={busy}
           onClick={() =>
-            run(() => api.markTwinReady(clientId, { kind, name: `Main ${kind}` }))
+            run(() =>
+              api.markTwinReady(client.ClientID, {
+                kind,
+                name: kind === "avatar" ? `${first} — main look` : `${first} — natural`,
+              }),
+            )
           }
-          className="rounded-full border border-dashed border-subtle px-4 py-2 text-sm text-muted transition-colors duration-300 hover:border-ink/30 hover:text-ink disabled:opacity-40"
         >
-          {kind} ready
-        </button>
+          {kind === "avatar" ? "Avatar ready" : "Voice ready"}
+        </Action>
       ))}
     </>
   );

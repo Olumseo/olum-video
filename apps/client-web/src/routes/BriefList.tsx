@@ -9,7 +9,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { api, type Brief } from "@olum-video/api-client";
+import { api } from "@olum-video/api-client";
 import { Reveal, presentBrief } from "@olum-video/ui";
 import { relativeTime } from "@olum-video/ui";
 

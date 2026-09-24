@@ -68,6 +68,21 @@ export interface RevisionNote {
   created_at: string;
 }
 
+/** Mirrors the `social_platform` enum. */
+export type SocialPlatform = "youtube" | "linkedin" | "instagram" | "tiktok" | "x";
+
+/** One live post of a video. */
+export interface Publication {
+  platform: SocialPlatform;
+  status: "queued" | "published" | "failed";
+  /**
+   * The permalink, as the platform gave it back. Null until the post exists —
+   * a non-null value is what "it's live" actually means.
+   */
+  public_url: string | null;
+  published_at: string | null;
+}
+
 export interface Video {
   id: string;
   title: string;
@@ -75,11 +90,23 @@ export interface Video {
   script: Script;
   versions: VideoVersion[];
   notes: RevisionNote[];
+  /** Where it went live. Empty until it has. */
+  publications: Publication[];
+  /** The request it came from, when it came from one. */
+  brief_id: string | null;
+  /** Staff lists only — they span clients. */
+  client_name?: string;
   /** Snapshotted from the plan when the video was created. */
   regen_limit: number;
   regens_used: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface PublishVideoRequest {
+  platform: SocialPlatform;
+  /** The link to the live post. */
+  url: string;
 }
 
 /** What the client is allowed to do right now. */
@@ -244,6 +271,12 @@ export interface Readiness {
   provider_verified: boolean;
   twin_ready: boolean;
   client_confirmed: boolean;
+  /**
+   * The client has asked for a twin and the request is still open. Read from
+   * the server so "asked" survives a reload — it used to live in component
+   * state and vanish, bringing the "Request my twin" button back.
+   */
+  twin_requested: boolean;
 }
 
 export type BriefStatus =
@@ -374,6 +407,28 @@ export interface QueueCounts {
   videos_to_produce: number;
   my_assignments: number;
   unassigned: number;
+  /** Approved by the client, not yet live anywhere. */
+  ready_to_publish: number;
+  /** Landing-page sign-ups nobody has called yet. Always 0 for agency staff. */
+  new_leads: number;
+}
+
+/** A verified sign-up from the landing page's "Create my AI clone" form. */
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  /** International form, e.g. +919876543210. Verified by SMS code. */
+  phone: string;
+  company: string | null;
+  /** "What will your videos be about?" */
+  note: string | null;
+  status: "new" | "contacted";
+  /** On the staff list: the NAME of whoever called them. */
+  contacted_by: string | null;
+  contacted_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ConfirmSetupRequest {
@@ -402,6 +457,12 @@ export interface OnboardingClient {
   /** Null means nobody has claimed it. */
   AssigneeName: string | null;
   CreatedAt: string;
+  /** The twin stage: asked for, and which halves are done. */
+  TwinRequested: boolean;
+  AvatarReady: boolean;
+  VoiceReady: boolean;
+  /** Since when they have been waiting on the thing they are waiting on. */
+  WaitingSince: string;
 }
 
 export interface RecordProviderRequest {

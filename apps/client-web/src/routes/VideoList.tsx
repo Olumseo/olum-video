@@ -1,6 +1,15 @@
+/**
+ * Videos: what exists and can be watched. Nothing else.
+ *
+ * Scripts waiting on the client are NOT rows here — they are requests, and
+ * they are decided in Requests. What this page does is say so, in one banner
+ * that links across, because a client who opens Videos to find "the thing
+ * that needs me" should not have to know which tab it lives in.
+ */
+
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { api, type Video } from "@olum-video/api-client";
+import { api, type Brief, type Video } from "@olum-video/api-client";
 import {
   Badge,
   Button,
@@ -9,6 +18,7 @@ import {
   ErrorState,
   LoadingRows,
   duration,
+  platformName,
   presentStatus,
   relativeTime,
 } from "@olum-video/ui";
@@ -27,12 +37,20 @@ const STAGGER_STEP_MS = 45;
 
 export default function VideoList() {
   const { data, error, loading, retry } = useAsync(() => api.listVideos());
+  // Only for the banner. A failure hides the banner rather than the page:
+  // the videos are the point here, the nudge is a courtesy.
+  const briefs = useAsync(() => api.listBriefs().catch((): Brief[] => []));
+  const scriptsWaiting = (briefs.data ?? []).filter(
+    (b) => b.status === "awaiting_client_approval",
+  );
 
   if (loading) return <LoadingRows rows={4} />;
   if (error) return <ErrorState message={error} onRetry={retry} />;
   if (!data?.length) {
     return (
-      <EmptyState
+      <>
+        <ScriptsBanner briefs={scriptsWaiting} />
+        <EmptyState
         heading="No videos yet"
         body="Send us a prompt and we'll write the script, or upload one you've already written."
         action={
@@ -40,7 +58,8 @@ export default function VideoList() {
             <Button>Create your first video</Button>
           </Link>
         }
-      />
+        />
+      </>
     );
   }
 
@@ -60,6 +79,8 @@ export default function VideoList() {
         )}
       </div>
 
+      <ScriptsBanner briefs={scriptsWaiting} />
+
       <div className="space-y-3">
         {data.map((video, i) => (
           <VideoRow key={video.id} video={video} index={i} />
@@ -69,10 +90,50 @@ export default function VideoList() {
   );
 }
 
+/**
+ * "N scripts need your OK →", linking to Requests.
+ *
+ * A link, not a redirect: a client who came to watch something should still
+ * be able to. And not rows in this list, because a script is not a video and
+ * cannot be watched.
+ */
+function ScriptsBanner({ briefs }: { briefs: Brief[] }) {
+  if (briefs.length === 0) return null;
+  const only = briefs.length === 1 ? briefs[0] : null;
+
+  return (
+    <Link
+      to={only ? `/briefs/${only.id}` : "/briefs"}
+      className="row-lift group relative mb-6 block overflow-hidden rounded-card border border-flare-ink/25 bg-flare/[0.045] px-5 py-4"
+    >
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-spectrum-v" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-flare-ink">
+            {briefs.length === 1 ? "1 script needs your OK" : `${briefs.length} scripts need your OK`}
+          </p>
+          <p className="mt-1 truncate text-sm text-ink">
+            {only ? only.title : "Read them in Requests before we make the videos."}
+          </p>
+        </div>
+        <span
+          aria-hidden
+          className="shrink-0 text-muted transition-transform duration-300 group-hover:translate-x-1"
+        >
+          →
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 function VideoRow({ video, index }: { video: Video; index: number }) {
   const status = presentStatus(video.status, "client");
   const latest = video.versions[0];
   const needsYou = video.status === "client_review";
+  const liveOn = video.publications
+    .filter((p) => p.public_url)
+    .map((p) => platformName(p.platform));
 
   return (
     <Link
@@ -103,6 +164,7 @@ function VideoRow({ video, index }: { video: Video; index: number }) {
               {latest && ` · ${duration(latest.duration_ms)}`}
               {video.regens_used > 0 &&
                 ` · ${video.regens_used} of ${video.regen_limit} revisions used`}
+              {liveOn.length > 0 && ` · live on ${liveOn.join(", ")}`}
             </p>
           </div>
           {/* self-start keeps the pill hugging the left edge when stacked,

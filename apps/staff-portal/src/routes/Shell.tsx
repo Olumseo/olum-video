@@ -25,6 +25,8 @@ const BADGE: Record<string, keyof QueueCounts> = {
   "/onboarding": "onboarding",
   "/briefs": "briefs_to_write",
   "/edits": "videos_to_produce",
+  "/publish": "ready_to_publish",
+  "/leads": "new_leads",
 };
 
 export default function Shell({
@@ -57,7 +59,11 @@ export default function Shell({
 
   // olum's own staff have no team to manage. Hidden, not protected — the
   // endpoints behind it refuse a caller with no agency regardless.
-  const items = nav.filter((i) => i.to !== "/team" || staff?.agency_id);
+  // Sign-ups are olum's, from olum's landing page — hidden from an agency's
+  // staff, whose API answers 404 for them anyway.
+  const items = nav.filter(
+    (i) => (i.to !== "/team" || staff?.agency_id) && (i.to !== "/leads" || !staff?.agency_id),
+  );
 
   return (
     <div className="min-h-screen bg-paper text-ink font-sans">

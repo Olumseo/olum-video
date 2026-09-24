@@ -23,6 +23,16 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // A leading underscore is how this codebase already spells "this
+      // argument exists because the signature requires it, and I am not using
+      // it" — see the mock handlers in api-client. Without this the convention
+      // is an error, so the convention was right and the config was wrong.
+      // Variables still have to be used; only arguments and caught errors are
+      // exempt, and only when named deliberately.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
       // The generated API client is committed; never hand-edit it.
       "no-restricted-imports": [
         "error",

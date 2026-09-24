@@ -51,7 +51,9 @@ function recompute(r: Readiness): Readiness {
     [
       r.twin_ready,
       "awaiting_digital_twin",
-      "Your digital twin isn't ready yet. Request one to get started.",
+      r.twin_requested
+        ? "You've asked for your digital twin. An executive will be in touch to book the recording."
+        : "Your digital twin isn't ready yet. Request one to get started.",
     ],
   ];
   const unmet = steps.find(([ok]) => !ok);
@@ -88,6 +90,7 @@ export function setMockReadiness(blocker: Readiness["blocker"]): void {
     client_confirmed: at > 4,
     twin_ready: at > 5,
     client_status: at > 4 ? "active" : at > 3 ? "awaiting_client_check" : "provisioning",
+    twin_requested: false,
   });
   twinRequested = false;
 }
@@ -112,6 +115,7 @@ export const onboardingMock = {
     await latency();
     const already = twinRequested;
     twinRequested = true;
+    readiness = recompute({ ...readiness, twin_requested: true });
     return {
       status: "requested",
       created: !already,
@@ -216,10 +220,23 @@ export const onboardingMock = {
   },
 
   async markTwinReady(
-    _clientId: string,
-    _req: MarkTwinReadyRequest,
+    clientId: string,
+    req: MarkTwinReadyRequest,
   ): Promise<{ status: string }> {
     await latency();
+    onboarding = onboarding
+      .map((c) =>
+        c.ClientID === clientId
+          ? {
+              ...c,
+              AvatarReady: c.AvatarReady || req.kind === "avatar",
+              VoiceReady: c.VoiceReady || req.kind === "voice",
+            }
+          : c,
+      )
+      // Both halves done: the request is closed and the row leaves the queue,
+      // as it does on the server.
+      .filter((c) => !(c.Status === "active" && c.AvatarReady && c.VoiceReady));
     return { status: "ready" };
   },
 
