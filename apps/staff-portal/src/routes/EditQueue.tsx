@@ -36,7 +36,10 @@ const NEEDS_STAFF = new Set([
 ]);
 
 export default function EditQueue() {
-  const { data, error, loading, retry } = useAsync(() => api.listVideos());
+  // listStaffVideos, NOT listVideos. listVideos is "my client account's
+  // videos" — for a member of staff that was their own test account, so this
+  // queue showed an employee their sandbox instead of their workload.
+  const { data, error, loading, retry } = useAsync(() => api.listStaffVideos());
 
   if (loading) return <LoadingRows rows={3} />;
   if (error) return <ErrorState message={error} onRetry={retry} />;
@@ -87,6 +90,7 @@ function WorkItem({ video }: { video: Video }) {
           <div>
             <p className="text-sm">{current.title}</p>
             <p className="mt-1 font-mono text-xs text-muted">
+              {video.client_name && `${video.client_name} · `}
               updated {relativeTime(current.updated_at)}
               {current.regens_used > 0 && ` · redo ${current.regens_used}/${current.regen_limit}`}
             </p>
@@ -110,7 +114,7 @@ function WorkItem({ video }: { video: Video }) {
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] ${
                   i < step
-                    ? "border-success bg-success/15 text-success"
+                    ? "border-success bg-success/15 text-success-ink"
                     : i === step
                       ? "border-ink text-ink"
                       : "border-subtle text-muted"

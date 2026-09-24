@@ -121,7 +121,7 @@ export function FileUpload({
       </div>
 
       {error && (
-        <p role="alert" className="mt-2 text-xs text-danger">
+        <p role="alert" className="mt-2 text-xs text-danger-ink">
           {error}
         </p>
       )}

@@ -9,6 +9,8 @@
 import type {
   Account,
   AttachVersionRequest,
+  PublishVideoRequest,
+  Lead,
   CreateVideoRequest,
   Entitlement,
   RequestUploadRequest,
@@ -20,12 +22,15 @@ import type {
   VideoVersion,
 } from "../types";
 import * as fixtures from "./data";
+import { onboardingMock } from "./onboarding";
+import { agencyMock } from "./agency";
 import { NotFoundError, QuotaError } from "../errors";
 
 const latency = (ms = 350) => new Promise((r) => setTimeout(r, ms));
 
 /** Mutable copy so writes during a session are visible on later reads. */
 let videos: Video[] = structuredClone(fixtures.videos);
+let leads: Lead[] = structuredClone(fixtures.leads);
 
 export const mockApi = {
   async getAccount(): Promise<Account> {
@@ -69,6 +74,8 @@ export const mockApi = {
       },
       versions: [],
       notes: [],
+      publications: [],
+      brief_id: null,
     };
     videos = [created, ...videos];
     return structuredClone(created);
@@ -184,6 +191,49 @@ export const mockApi = {
     return structuredClone(video);
   },
 
+  async listStaffVideos(): Promise<Video[]> {
+    await latency();
+    return structuredClone(videos).map((v) => ({ ...v, client_name: "Northwind Co" }));
+  },
+
+  async publishVideo(id: string, req: PublishVideoRequest): Promise<Video> {
+    await latency(500);
+    const video = videos.find((v) => v.id === id);
+    if (!video) throw new NotFoundError(`No video ${id}`);
+    // The rule the server enforces in the transaction: only what the client
+    // approved goes out.
+    if (!["approved", "publish_queued", "published"].includes(video.status)) {
+      throw new Error("That has already moved on. Reload and try again.");
+    }
+    video.publications = [
+      {
+        platform: req.platform,
+        status: "published",
+        public_url: req.url,
+        published_at: new Date().toISOString(),
+      },
+      ...video.publications.filter((p) => p.platform !== req.platform),
+    ];
+    video.status = "published";
+    video.updated_at = new Date().toISOString();
+    return structuredClone(video);
+  },
+
+  async listLeads(): Promise<Lead[]> {
+    await latency();
+    return structuredClone(leads);
+  },
+
+  async markLeadContacted(id: string): Promise<{ status: string }> {
+    await latency(300);
+    leads = leads.map((l) =>
+      l.id === id
+        ? { ...l, status: "contacted", contacted_by: "You", contacted_at: new Date().toISOString() }
+        : l,
+    );
+    return { status: "contacted" };
+  },
+
   async listTickets(): Promise<Ticket[]> {
     await latency();
     return structuredClone(fixtures.tickets);
@@ -193,6 +243,13 @@ export const mockApi = {
     await latency();
     return structuredClone(fixtures.staffClients);
   },
+
+  // Onboarding, twins and briefs live in their own module: they share their
+  // own mutable state and need a way to be PUT into each state for demos.
+  ...onboardingMock,
+
+  // Agencies, teams and the editor's own queue.
+  ...agencyMock,
 };
 
 export type Api = typeof mockApi;

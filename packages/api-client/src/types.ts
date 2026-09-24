@@ -68,6 +68,21 @@ export interface RevisionNote {
   created_at: string;
 }
 
+/** Mirrors the `social_platform` enum. */
+export type SocialPlatform = "youtube" | "linkedin" | "instagram" | "tiktok" | "x";
+
+/** One live post of a video. */
+export interface Publication {
+  platform: SocialPlatform;
+  status: "queued" | "published" | "failed";
+  /**
+   * The permalink, as the platform gave it back. Null until the post exists —
+   * a non-null value is what "it's live" actually means.
+   */
+  public_url: string | null;
+  published_at: string | null;
+}
+
 export interface Video {
   id: string;
   title: string;
@@ -75,11 +90,23 @@ export interface Video {
   script: Script;
   versions: VideoVersion[];
   notes: RevisionNote[];
+  /** Where it went live. Empty until it has. */
+  publications: Publication[];
+  /** The request it came from, when it came from one. */
+  brief_id: string | null;
+  /** Staff lists only — they span clients. */
+  client_name?: string;
   /** Snapshotted from the plan when the video was created. */
   regen_limit: number;
   regens_used: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface PublishVideoRequest {
+  platform: SocialPlatform;
+  /** The link to the live post. */
+  url: string;
 }
 
 /** What the client is allowed to do right now. */
@@ -191,4 +218,288 @@ export interface AttachVersionRequest {
    */
   trigger: VersionTrigger;
   note?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Onboarding, digital twins and briefs.
+//
+//  A client is not usable the moment they pay: a person has to create their
+//  mailbox and studio account, they cross-check it, and they need a digital
+//  twin before any video can exist. See video-service/DESIGN-GUIDE.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The first unmet step, in the order the client experiences them.
+ *
+ * Ordered deliberately: telling someone their twin is not ready when their
+ * account is not even verified sends them to the wrong place.
+ */
+export type Blocker =
+  | ""
+  | "no_entitlement"
+  | "awaiting_managed_email"
+  | "awaiting_provider_account"
+  | "awaiting_provider_verification"
+  | "awaiting_client_confirmation"
+  | "awaiting_digital_twin";
+
+export type ClientStatus =
+  | ""
+  | "pending_provisioning"
+  | "provisioning"
+  | "awaiting_client_check"
+  | "active"
+  | "suspended"
+  | "closed";
+
+/**
+ * What, if anything, is blocking this client from making a video.
+ *
+ * The API refuses `createBrief` on exactly this answer, which is why the UI
+ * must read it rather than deriving its own version — two implementations
+ * drift, and the failure is a button the API then refuses.
+ */
+export interface Readiness {
+  ready: boolean;
+  blocker: Blocker;
+  /** The blocker, phrased for a person. */
+  message: string;
+  client_status: ClientStatus;
+  entitled: boolean;
+  email_created: boolean;
+  provider_created: boolean;
+  provider_verified: boolean;
+  twin_ready: boolean;
+  client_confirmed: boolean;
+  /**
+   * The client has asked for a twin and the request is still open. Read from
+   * the server so "asked" survives a reload — it used to live in component
+   * state and vanish, bringing the "Request my twin" button back.
+   */
+  twin_requested: boolean;
+}
+
+export type BriefStatus =
+  | "generating"
+  | "ready_for_staff"
+  /** Staff have finished the script and handed it to the client to decide. */
+  | "awaiting_client_approval"
+  | "generation_failed"
+  | "approved"
+  | "rejected";
+
+/** The "context page": a prompt, what we know, and the draft staff approve. */
+export interface Brief {
+  id: string;
+  client_id: string;
+  title: string;
+  prompt: string;
+  /** A SNAPSHOT taken when the brief was created, not a live reference. */
+  context: Record<string, unknown>;
+  body: string | null;
+  status: BriefStatus;
+  rounds: number;
+  max_rounds: number;
+  failure_reason: string | null;
+  /** Set once approved and turned into a video. */
+  video_id: string | null;
+  /** Staff views only. */
+  client_name?: string;
+  /**
+   * Where the words came from. "script" means the CLIENT wrote them, so the
+   * UI must not present it as something we drafted for them.
+   */
+  source: "prompt" | "script";
+  /** Set when it reached the client, and when they decided. */
+  sent_to_client_at: string | null;
+  client_decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBriefRequest {
+  title: string;
+  /** Either this or `script`. A prompt is a description of what they want. */
+  prompt: string;
+  /** Either this or `prompt`. A script is the finished words. */
+  script?: string;
+}
+
+// ── agencies ────────────────────────────────────────────────────────────────
+
+export interface Agency {
+  id: string;
+  name: string;
+  owner_user_id: string;
+  created_at: string;
+}
+
+/** A permission, not a job title. See `position` for the title. */
+export type TeamRole = "employee" | "editor" | "admin";
+
+export interface TeamMember {
+  staff_id: string;
+  user_id: string;
+  name: string;
+  position: string | null;
+  roles: TeamRole[];
+  is_owner: boolean;
+  active: boolean;
+}
+
+export interface TeamInvite {
+  id: string;
+  email: string;
+  position: string | null;
+  role: TeamRole;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+  /**
+   * Present ONLY on the response that created the invite. The server stores a
+   * hash, so this cannot be fetched again — show it or lose it.
+   */
+  token?: string;
+}
+
+export interface InviteResult {
+  invite: TeamInvite;
+  /** The full URL to send. Only available at creation, same as the token. */
+  link: string;
+}
+
+/** What someone holding an invite link is told before they sign in. */
+export interface InvitePreview {
+  agency_name: string;
+  position: string;
+  role: TeamRole;
+}
+
+// ── editors ─────────────────────────────────────────────────────────────────
+
+export interface EditorAssignment {
+  ticket_id: string;
+  ticket_type: string;
+  ticket_status: string;
+  priority: number;
+  video_id: string | null;
+  title: string;
+  video_status: VideoStatus | null;
+  client_id: string;
+  client_name: string;
+  sla_due_at: string | null;
+  assigned_at: string;
+}
+
+/** An editor and how much they are already carrying. */
+export interface EditorWorkload {
+  staff_id: string;
+  name: string;
+  position: string | null;
+  open: number;
+  in_flight: number;
+}
+
+export interface QueueCounts {
+  onboarding: number;
+  briefs_to_write: number;
+  awaiting_client: number;
+  videos_to_produce: number;
+  my_assignments: number;
+  unassigned: number;
+  /** Approved by the client, not yet live anywhere. */
+  ready_to_publish: number;
+  /** Landing-page sign-ups nobody has called yet. Always 0 for agency staff. */
+  new_leads: number;
+}
+
+/** A verified sign-up from the landing page's "Create my AI clone" form. */
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  /** International form, e.g. +919876543210. Verified by SMS code. */
+  phone: string;
+  company: string | null;
+  /** "What will your videos be about?" */
+  note: string | null;
+  status: "new" | "contacted";
+  /** On the staff list: the NAME of whoever called them. */
+  contacted_by: string | null;
+  contacted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConfirmSetupRequest {
+  confirmed: boolean;
+  /** Required when confirmed is false — otherwise staff cannot act on it. */
+  reason?: string;
+}
+
+export interface TwinRequestResult {
+  status: string;
+  /** False when a request was already open. */
+  created: boolean;
+  message: string;
+}
+
+/** One row of the staff provisioning queue. Go field names, not snake_case. */
+export interface OnboardingClient {
+  ClientID: string;
+  UserID: string;
+  DisplayName: string;
+  Status: ClientStatus;
+  ManagedEmail: string | null;
+  ExternalID: string | null;
+  Verification: string | null;
+  TicketID: string | null;
+  /** Null means nobody has claimed it. */
+  AssigneeName: string | null;
+  CreatedAt: string;
+  /** The twin stage: asked for, and which halves are done. */
+  TwinRequested: boolean;
+  AvatarReady: boolean;
+  VoiceReady: boolean;
+  /** Since when they have been waiting on the thing they are waiting on. */
+  WaitingSince: string;
+}
+
+export interface RecordProviderRequest {
+  managed_email: string;
+  external_account_id?: string;
+  credentials_ref?: string;
+}
+
+export interface MarkTwinReadyRequest {
+  kind: "avatar" | "voice";
+  external_id?: string;
+  name?: string;
+}
+
+// ── who am I ────────────────────────────────────────────────────────────────
+
+/** The caller as a member of staff. Absent for ordinary customers. */
+export interface StaffIdentity {
+  id: string;
+  name: string;
+  roles: TeamRole[];
+  position: string | null;
+  /** null = they work for olum itself, not for an agency. */
+  agency_id: string | null;
+  agency_name: string | null;
+}
+
+/**
+ * Identity, said directly.
+ *
+ * Both halves are nullable and neither being present is a valid answer, not an
+ * error: the apps used to infer this from GET /account returning 403, which
+ * told every agency employee — who has a staff row and no subscription — to go
+ * and buy the product they are employed to operate.
+ */
+export interface Me {
+  user_id: string;
+  account: Account | null;
+  staff: StaffIdentity | null;
 }

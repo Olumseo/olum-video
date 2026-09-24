@@ -4,10 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>olum.video</title>
+    <meta name="theme-color" content="#f5f2ec" />
+    <!-- Signed-in screens: nothing here belongs in a search index or a link
+         preview, and the app is behind a session anyway. -->
+    <meta name="robots" content="noindex, nofollow" />
+
     <!-- Fonts load from a single <link>, never a CSS @import: an @import cannot
          start downloading until the stylesheet itself has arrived and parsed,
          adding a chained round trip to the critical path. olum.ai removed
-         theirs for this reason — do not reintroduce one. -->
+         theirs for this reason — do not reintroduce one.
+
+         Until this was added, `font-serif` and `font-mono` were used all over
+         these screens while the families they name were never fetched, so
+         every heading and every label silently fell back to Georgia and
+         Courier. Same three families as olum.ai, requested in the same order,
+         so a visitor arriving from olum.ai reuses the cached response (both
+         are served from the same origin).
+
+         Satoshi is deliberately NOT requested. It is not a Google font; the
+         olum.ai stack names it first and it silently 404s, so body copy there
+         has always rendered in the system sans. Matching that is the point —
+         tokens.css is a one-way copy of olum.ai's palette and type stack.
+
+         `media="print"` + `onload` makes this non-render-blocking: the browser
+         fetches at low priority without holding up first paint, then flips it
+         live. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Mono:wght@400;500&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Mono:wght@400;500&display=swap"
+      media="print"
+      onload="this.media='all';this.onload=null;"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Mono:wght@400;500&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

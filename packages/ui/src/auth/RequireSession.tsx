@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { DevSignIn } from "./DevSignIn";
 import { useSession } from "./useSession";
 import { LoadingRows } from "../components/States";
 
@@ -13,10 +14,23 @@ import { LoadingRows } from "../components/States";
  */
 export function RequireSession({
   children,
+  requires = "client",
   signInUrl = "/",
   upgradeUrl = "/video/welcome/pricing",
 }: {
   children: ReactNode;
+  /**
+   * What this app needs beyond a session.
+   *
+   * "client" — a video subscription. The customer app.
+   * "staff"  — a staff record. The portal.
+   *
+   * These are genuinely different, and treating them as one is what locked
+   * agency staff out: an agency's owner has a staff row and no subscription,
+   * so the subscription check told them to buy the product they are employed
+   * to operate.
+   */
+  requires?: "client" | "staff";
   signInUrl?: string;
   upgradeUrl?: string;
 }) {
@@ -31,6 +45,16 @@ export function RequireSession({
   }
 
   if (session.status === "unauthenticated") {
+    // On a laptop there is no authservice to send them to, so "Go to sign in"
+    // is a dead link and the app cannot be opened at all. Offer the seeded
+    // users instead.
+    //
+    // `import.meta.env.DEV` is a compile-time constant: a production build
+    // evaluates it to false and the bundler drops DevSignIn entirely, so this
+    // is absent rather than merely hidden.
+    if (import.meta.env.DEV) {
+      return <DevSignIn />;
+    }
     return (
       <Gate
         heading="Please sign in"
@@ -48,6 +72,31 @@ export function RequireSession({
       <Gate
         heading="Video isn't on your plan yet"
         body={session.reason}
+        actionLabel="See plans"
+        href={upgradeUrl}
+      />
+    );
+  }
+
+  if (requires === "staff" && !session.staff) {
+    // Signed in, but does not work here. NOT an upsell — buying a
+    // subscription would not grant portal access, so offering one would send
+    // them somewhere that cannot help.
+    return (
+      <Gate
+        heading="This is the staff portal"
+        body="Your account isn't on a team. If you were sent an invite link, open that instead."
+        actionLabel="Go to olum.video"
+        href="/video/"
+      />
+    );
+  }
+
+  if (requires === "client" && !session.account) {
+    return (
+      <Gate
+        heading="Video isn't on your plan yet"
+        body="Add the video product to your olum account to get started."
         actionLabel="See plans"
         href={upgradeUrl}
       />

@@ -1,7 +1,17 @@
 // Fixture data for development. Replaced by real API calls once the Go service
 // has endpoints; nothing outside src/mock/ imports this file.
 
-import type { Account, Entitlement, StaffClient, Ticket, Video } from "../types";
+import type {
+  Account,
+  Lead,
+  Brief,
+  Entitlement,
+  OnboardingClient,
+  Readiness,
+  StaffClient,
+  Ticket,
+  Video,
+} from "../types";
 
 const now = Date.now();
 const ago = (mins: number) => new Date(now - mins * 60_000).toISOString();
@@ -28,6 +38,8 @@ export const videos: Video[] = [
     id: "vid_04",
     title: "Q3 product update",
     status: "client_review",
+    brief_id: null,
+    publications: [],
     regen_limit: 2,
     regens_used: 0,
     created_at: ago(180),
@@ -80,6 +92,8 @@ export const videos: Video[] = [
     id: "vid_03",
     title: "Welcome message for new signups",
     status: "gen_running",
+    brief_id: null,
+    publications: [],
     regen_limit: 2,
     regens_used: 0,
     created_at: ago(95),
@@ -98,6 +112,8 @@ export const videos: Video[] = [
     id: "vid_02",
     title: "Customer story — Meridian",
     status: "rework_requested",
+    brief_id: null,
+    publications: [],
     regen_limit: 2,
     regens_used: 1,
     created_at: ago(2_600),
@@ -138,6 +154,15 @@ export const videos: Video[] = [
     id: "vid_01",
     title: "Founder intro",
     status: "published",
+    brief_id: null,
+    publications: [
+      {
+        platform: "linkedin",
+        status: "published",
+        public_url: "https://www.linkedin.com/posts/priya-raghavan_founder-intro",
+        published_at: ago(6_900),
+      },
+    ],
     regen_limit: 2,
     regens_used: 2,
     created_at: ago(8_000),
@@ -227,4 +252,190 @@ export const staffClients: StaffClient[] = [
   { id: "cl_02", name: "Meridian Labs", email: "ops@meridian.io", plan: "Premium Video", videos_in_flight: 3, status: "active" },
   { id: "cl_03", name: "Kestrel & Co", email: "hello@kestrel.co", plan: "Premium Video", videos_in_flight: 1, status: "active" },
   { id: "cl_04", name: "Bramble", email: "team@bramble.app", plan: "Ultimate", videos_in_flight: 0, status: "suspended" },
+];
+
+// ── onboarding, twins and briefs ─────────────────────────────────────────────
+
+/**
+ * The fixture client is FULLY ONBOARDED.
+ *
+ * Deliberate: the everyday screen is the one most people are looking at, so
+ * that is what fixtures should show by default. The half-finished states are
+ * reachable with `?state=` on the onboarding route — see Onboarding.tsx — which
+ * makes them easy to demo without making them the default.
+ */
+export const readiness: Readiness = {
+  ready: true,
+  blocker: "",
+  message: "",
+  client_status: "active",
+  entitled: true,
+  email_created: true,
+  provider_created: true,
+  provider_verified: true,
+  twin_ready: true,
+  client_confirmed: true,
+  twin_requested: false,
+};
+
+export const briefs: Brief[] = [
+  {
+    id: "b1000000-0000-4000-8000-000000000001",
+    client_id: "c1000000-0000-4000-8000-000000000001",
+    title: "Q3 pricing update",
+    prompt: "Explain the new pricing tiers and why we changed them.",
+    context: {
+      industry: "B2B SaaS",
+      audience: "Founders and heads of growth",
+      tone: "Direct, warm, no jargon",
+      recent_topics: ["AI tooling", "Pricing", "Hiring"],
+    },
+    body: "# Q3 pricing update\n\nScript: We've changed how our pricing works…",
+    status: "ready_for_staff",
+    rounds: 0,
+    max_rounds: 2,
+    failure_reason: null,
+    video_id: null,
+    source: "prompt",
+    sent_to_client_at: null,
+    client_decided_at: null,
+    client_name: "Acme Ltd",
+    created_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    updated_at: new Date(Date.now() - 40 * 60_000).toISOString(),
+  },
+  {
+    id: "b1000000-0000-4000-8000-000000000002",
+    client_id: "c1000000-0000-4000-8000-000000000001",
+    title: "Hiring: senior engineer",
+    prompt: "We're hiring a senior backend engineer. Make it sound human.",
+    context: { industry: "B2B SaaS", audience: "Engineers", tone: "Plain, unhyped" },
+    body: null,
+    status: "generating",
+    rounds: 0,
+    max_rounds: 2,
+    failure_reason: null,
+    video_id: null,
+    source: "prompt",
+    sent_to_client_at: null,
+    client_decided_at: null,
+    client_name: "Acme Ltd",
+    created_at: new Date(Date.now() - 20 * 60_000).toISOString(),
+    updated_at: new Date(Date.now() - 20 * 60_000).toISOString(),
+  },
+  {
+    id: "b1000000-0000-4000-8000-000000000003",
+    client_id: "c1000000-0000-4000-8000-000000000001",
+    title: "Customer story: Northwind",
+    prompt: "Walk through how Northwind cut onboarding from 3 weeks to 2 days.",
+    context: { industry: "B2B SaaS", audience: "Ops leads" },
+    body: "# Customer story\n\nScript: Northwind used to spend three weeks…",
+    status: "approved",
+    rounds: 1,
+    max_rounds: 2,
+    failure_reason: null,
+    video_id: "11111111-1111-4111-8111-111111111111",
+    source: "prompt",
+    sent_to_client_at: new Date(Date.now() - 26 * 3600_000).toISOString(),
+    client_decided_at: new Date(Date.now() - 25 * 3600_000).toISOString(),
+    client_name: "Acme Ltd",
+    created_at: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+  },
+];
+
+export const onboardingQueue: OnboardingClient[] = [
+  {
+    ClientID: "c2000000-0000-4000-8000-000000000002",
+    UserID: "u2000000-0000-4000-8000-000000000002",
+    DisplayName: "Brightside Studio",
+    Status: "pending_provisioning",
+    ManagedEmail: null,
+    ExternalID: null,
+    Verification: null,
+    TicketID: "t2000000-0000-4000-8000-000000000002",
+    AssigneeName: null,
+    CreatedAt: new Date(Date.now() - 26 * 3600_000).toISOString(),
+    TwinRequested: false,
+    AvatarReady: false,
+    VoiceReady: false,
+    WaitingSince: new Date(Date.now() - 26 * 3600_000).toISOString(),
+  },
+  {
+    ClientID: "c3000000-0000-4000-8000-000000000003",
+    UserID: "u3000000-0000-4000-8000-000000000003",
+    DisplayName: "Fern & Co",
+    Status: "provisioning",
+    ManagedEmail: "fern@video.olum.ai",
+    ExternalID: null,
+    Verification: "invited",
+    TicketID: "t3000000-0000-4000-8000-000000000003",
+    AssigneeName: "Arun",
+    CreatedAt: new Date(Date.now() - 5 * 3600_000).toISOString(),
+    TwinRequested: false,
+    AvatarReady: false,
+    VoiceReady: false,
+    WaitingSince: new Date(Date.now() - 5 * 3600_000).toISOString(),
+  },
+  {
+    ClientID: "c4000000-0000-4000-8000-000000000004",
+    UserID: "u4000000-0000-4000-8000-000000000004",
+    DisplayName: "Halcyon Labs",
+    Status: "awaiting_client_check",
+    ManagedEmail: "halcyon@video.olum.ai",
+    ExternalID: "heygen_halcyon",
+    Verification: "verified",
+    TicketID: "t4000000-0000-4000-8000-000000000004",
+    AssigneeName: "Priya",
+    CreatedAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    TwinRequested: false,
+    AvatarReady: false,
+    VoiceReady: false,
+    WaitingSince: new Date(Date.now() - 2 * 3600_000).toISOString(),
+  },
+  {
+    // Active, and asked for their twin — the stage the queue used to miss.
+    ClientID: "c5000000-0000-4000-8000-000000000005",
+    UserID: "u5000000-0000-4000-8000-000000000005",
+    DisplayName: "Vikram Shah · Build Notes",
+    Status: "active",
+    ManagedEmail: "vikram@video.olum.ai",
+    ExternalID: "heygen_vikram",
+    Verification: "verified",
+    TicketID: null,
+    AssigneeName: null,
+    CreatedAt: new Date(Date.now() - 9 * 86_400_000).toISOString(),
+    TwinRequested: true,
+    AvatarReady: false,
+    VoiceReady: false,
+    WaitingSince: new Date(Date.now() - 50 * 60_000).toISOString(),
+  },
+];
+
+export const leads: Lead[] = [
+  {
+    id: "l1000000-0000-4000-8000-000000000001",
+    name: "Neha Kapoor",
+    email: "neha@moneyminute.in",
+    phone: "+919812345678",
+    company: null,
+    note: "Personal finance tips, one a day.",
+    status: "new",
+    contacted_by: null,
+    contacted_at: null,
+    created_at: ago(35),
+    updated_at: ago(35),
+  },
+  {
+    id: "l1000000-0000-4000-8000-000000000002",
+    name: "Daniel Brooks",
+    email: "dan@brookslaw.co.uk",
+    phone: "+447700900123",
+    company: "Brooks Law",
+    note: "Explainers on UK tenancy law.",
+    status: "contacted",
+    contacted_by: "You (olum admin)",
+    contacted_at: ago(600),
+    created_at: ago(1_500),
+    updated_at: ago(600),
+  },
 ];

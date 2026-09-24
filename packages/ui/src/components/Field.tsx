@@ -28,7 +28,7 @@ export function Field({
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
       <div className="mt-2">{children}</div>
       {error && (
-        <p role="alert" className="mt-1.5 text-xs text-danger">
+        <p role="alert" className="mt-1.5 text-xs text-danger-ink">
           {error}
         </p>
       )}

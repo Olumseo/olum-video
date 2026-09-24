@@ -1,12 +1,20 @@
 // The real HTTP client, implementing the same interface as the mock.
 //
-// Not exercised yet — video-service has no endpoints beyond health probes. It
-// exists now so that switching over is a config change (VITE_API_MODE=http)
-// rather than a rewrite, and so the request/response contract is written down
-// while the shape is fresh.
+// Every method here is backed by a live endpoint in video-service and
+// documented in its openapi/openapi.yaml. Switching between this and the
+// fixtures is VITE_API_MODE, nothing more.
 
 import { dpopFetch } from "./dpop";
+import { withRefresh } from "./refresh";
 import type {
+  Brief,
+  ConfirmSetupRequest,
+  CreateBriefRequest,
+  MarkTwinReadyRequest,
+  OnboardingClient,
+  Readiness,
+  RecordProviderRequest,
+  TwinRequestResult,
   Account,
   AttachVersionRequest,
   CreateVideoRequest,
@@ -17,9 +25,27 @@ import type {
   Ticket,
   UploadTicket,
   Video,
+  Agency,
+  TeamMember,
+  TeamInvite,
+  TeamRole,
+  InviteResult,
+  InvitePreview,
+  EditorAssignment,
+  EditorWorkload,
+  QueueCounts,
+  PublishVideoRequest,
+  Lead,
+  Me,
 } from "./types";
 import type { Api } from "./mock/client";
-import { ForbiddenError, NotFoundError, QuotaError, UnauthorizedError } from "./errors";
+import {
+  ForbiddenError,
+  NotFoundError,
+  NotReadyError,
+  QuotaError,
+  UnauthorizedError,
+} from "./errors";
 
 const BASE = "/api/v1/video";
 
@@ -39,9 +65,15 @@ async function handle<T>(res: Response): Promise<T> {
   }
 
   let message = "";
+  let blocker = "";
   try {
-    const body = (await res.json()) as { message?: string; detail?: string };
+    const body = (await res.json()) as {
+      message?: string;
+      detail?: string;
+      blocker?: string;
+    };
     message = body.message ?? body.detail ?? "";
+    blocker = body.blocker ?? "";
   } catch {
     /* non-JSON error body */
   }
@@ -53,6 +85,11 @@ async function handle<T>(res: Response): Promise<T> {
       throw new ForbiddenError(message || undefined);
     case 404:
       throw new NotFoundError(message || "Not found.");
+    case 409:
+      // Onboarding is not finished. NOT a 403: the user has paid and is
+      // allowed, so "not on your plan" would be wrong and unactionable. The
+      // blocker names the step that is actually waiting.
+      throw new NotReadyError(message || undefined, blocker);
     case 429:
       throw new QuotaError(message || "You've reached your plan's limit.");
     default:
@@ -60,22 +97,33 @@ async function handle<T>(res: Response): Promise<T> {
   }
 }
 
+// Both verbs go through withRefresh, so an expired session is renewed in place
+// instead of throwing the user out. The closure is what makes the retry legal:
+// it builds a NEW request, with a new DPoP proof, since a proof's jti is
+// single-use and replaying one is rejected.
 function get<T>(path: string): Promise<T> {
-  return dpopFetch(`${BASE}${path}`).then((r) => handle<T>(r));
+  return withRefresh(() => dpopFetch(`${BASE}${path}`)).then((r) => handle<T>(r));
 }
 
 function post<T>(path: string, body: unknown, idempotencyKey?: string): Promise<T> {
-  return dpopFetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // Every mutation carries one. A request that times out and is retried
-      // must not consume two videos' worth of quota — the server matches on
-      // this key and returns the original result.
-      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-    },
-    body: JSON.stringify(body),
-  }).then((r) => handle<T>(r));
+  // Generated OUTSIDE the closure on purpose. If the retry made a new key the
+  // server would treat it as a second, unrelated action — so a refresh in the
+  // middle of "create video" could charge two videos of quota. The whole point
+  // of the header is that both attempts are recognised as one intent.
+  const key = idempotencyKey;
+  return withRefresh(() =>
+    dpopFetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Every mutation carries one. A request that times out and is retried
+        // must not consume two videos' worth of quota — the server matches on
+        // this key and returns the original result.
+        ...(key ? { "Idempotency-Key": key } : {}),
+      },
+      body: JSON.stringify(body),
+    }),
+  ).then((r) => handle<T>(r));
 }
 
 /** A key that is stable for one user action and unique across actions. */
@@ -84,6 +132,8 @@ function newIdempotencyKey(): string {
 }
 
 export const httpApi: Api = {
+  getMe: () => get<Me>("/me"),
+
   getAccount: () => get<Account>("/account"),
   getEntitlement: () => get<Entitlement>("/entitlement"),
 
@@ -144,5 +194,121 @@ export const httpApi: Api = {
     ),
 
   listTickets: () => get<Ticket[]>("/staff/tickets"),
+
+  // Every video in the caller's organisation. NOT listVideos, which is the
+  // signed-in person's own client account.
+  listStaffVideos: () => get<Video[]>("/staff/videos"),
+
+  // Landing-page sign-ups — olum's staff only.
+  listLeads: () => get<Lead[]>("/staff/leads"),
+  markLeadContacted: (id: string) =>
+    post<{ status: string }>(`/staff/leads/${encodeURIComponent(id)}/contacted`, {}, newIdempotencyKey()),
+
+  publishVideo: (id: string, req: PublishVideoRequest) =>
+    post<Video>(`/staff/videos/${encodeURIComponent(id)}/publish`, req, newIdempotencyKey()),
   listClients: () => get<StaffClient[]>("/staff/clients"),
+
+  // ── onboarding, twins and briefs ──────────────────────────────────────────
+
+  getReadiness: () => get<Readiness>("/readiness"),
+
+  confirmSetup: (req: ConfirmSetupRequest) =>
+    post<Readiness>("/onboarding/confirm", req, newIdempotencyKey()),
+
+  requestTwin: () => post<TwinRequestResult>("/twin-requests", {}, newIdempotencyKey()),
+
+  listBriefs: () => get<Brief[]>("/briefs"),
+  getBrief: (id: string) => get<Brief>(`/briefs/${encodeURIComponent(id)}`),
+
+  createBrief: (req: CreateBriefRequest) => post<Brief>("/briefs", req, newIdempotencyKey()),
+
+  // ── staff ─────────────────────────────────────────────────────────────────
+
+  listOnboarding: () => get<OnboardingClient[]>("/staff/onboarding"),
+
+  claimOnboarding: (clientId: string) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/claim`, {}, newIdempotencyKey()),
+
+  recordProvider: (clientId: string, req: RecordProviderRequest) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/provider`, req, newIdempotencyKey()),
+
+  verifyProvider: (clientId: string) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/verify`, {}, newIdempotencyKey()),
+
+  submitForCheck: (clientId: string) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/submit`, {}, newIdempotencyKey()),
+
+  markTwinReady: (clientId: string, req: MarkTwinReadyRequest) =>
+    post<{ status: string }>(
+      `/staff/clients/${encodeURIComponent(clientId)}/twin`, req, newIdempotencyKey()),
+
+  listPendingBriefs: () => get<Brief[]>("/staff/briefs"),
+  getStaffBrief: (id: string) => get<Brief>(`/staff/briefs/${encodeURIComponent(id)}`),
+
+  writeBrief: (id: string, body: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/write`, { body }, newIdempotencyKey()),
+
+  // Staff HAND OVER; they no longer approve. `body` is optional: sending it
+  // saves the edit and hands over in one action, which is what the review
+  // screen does.
+  sendBriefToClient: (id: string, body?: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/send`,
+      body === undefined ? {} : { body },
+      newIdempotencyKey()),
+
+  // ── the CLIENT's decision ────────────────────────────────────────────────
+  approveBrief: (id: string) =>
+    post<{ status: string; video_id: string }>(
+      `/briefs/${encodeURIComponent(id)}/approve`, {}, newIdempotencyKey()),
+
+  requestScriptChanges: (id: string, note: string) =>
+    post<{ status: string }>(
+      `/briefs/${encodeURIComponent(id)}/changes`, { note }, newIdempotencyKey()),
+
+  requestBriefChanges: (id: string, reason: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/changes`, { reason }, newIdempotencyKey()),
+
+  rejectBrief: (id: string, reason: string) =>
+    post<{ status: string }>(
+      `/staff/briefs/${encodeURIComponent(id)}/reject`, { reason }, newIdempotencyKey()),
+
+  assignTicket: (ticketId: string, staffId: string) =>
+    post<{ status: string }>(
+      `/staff/tickets/${encodeURIComponent(ticketId)}/assign`,
+      { staff_id: staffId }, newIdempotencyKey()),
+
+  // ── editors ──────────────────────────────────────────────────────────────
+  listMyAssignments: () => get<EditorAssignment[]>("/staff/my-work"),
+  listEditors: () => get<EditorWorkload[]>("/staff/editors"),
+  getQueueCounts: () => get<QueueCounts>("/staff/counts"),
+
+  // ── agencies ─────────────────────────────────────────────────────────────
+  registerAgency: (name: string) =>
+    post<Agency>("/agency", { name }, newIdempotencyKey()),
+
+  getMyAgency: () => get<{ agency: Agency | null }>("/agency"),
+
+  getTeam: () => get<{ members: TeamMember[]; invites: TeamInvite[] }>("/agency/team"),
+
+  inviteMember: (email: string, position: string, role: TeamRole) =>
+    post<InviteResult>("/agency/team/invites",
+      { email, position, role }, newIdempotencyKey()),
+
+  revokeInvite: (id: string) =>
+    post<{ status: string }>(
+      `/agency/team/invites/${encodeURIComponent(id)}/revoke`, {}, newIdempotencyKey()),
+
+  // No session required — the invitee does not have one yet.
+  peekInvite: (token: string) =>
+    get<InvitePreview>(`/agency/invites/peek?token=${encodeURIComponent(token)}`),
+
+  acceptInvite: (token: string, name: string) =>
+    post<Agency>("/agency/join", { token, name }, newIdempotencyKey()),
 };

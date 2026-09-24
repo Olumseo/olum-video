@@ -5,9 +5,9 @@ export type Tone = "neutral" | "progress" | "attention" | "good" | "bad";
 const TONES: Record<Tone, string> = {
   neutral: "border-subtle bg-cream text-muted",
   progress: "border-subtle bg-warm text-ink",
-  attention: "border-accent/40 bg-accent/10 text-accent",
-  good: "border-success/30 bg-success/10 text-success",
-  bad: "border-danger/30 bg-danger/10 text-danger",
+  attention: "border-accent/40 bg-accent/10 text-accent-ink",
+  good: "border-success/30 bg-success/10 text-success-ink",
+  bad: "border-danger/30 bg-danger/10 text-danger-ink",
 };
 
 /**

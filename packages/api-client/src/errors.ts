@@ -45,3 +45,21 @@ export class QuotaError extends Error {
     this.name = "QuotaError";
   }
 }
+
+/**
+ * Signed in and entitled, but onboarding is not finished.
+ *
+ * Distinct from ForbiddenError on purpose. A 403 means "not on your plan" and
+ * the UI offers the pricing page; this means "you have paid and you are
+ * allowed, but a step is still outstanding" — and `blocker` says which, so the
+ * UI can send the user to the step that is actually waiting rather than to a
+ * page that cannot help them.
+ */
+export class NotReadyError extends Error {
+  readonly blocker: string;
+  constructor(message = "Your account isn't ready yet.", blocker = "") {
+    super(message);
+    this.name = "NotReadyError";
+    this.blocker = blocker;
+  }
+}

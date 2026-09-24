@@ -1,7 +1,330 @@
 /* Design tokens first, so --ink/--paper/etc. exist before Tailwind's utilities
-   (which reference them via the shared preset) are applied. */
+   (which reference them via the shared preset) are applied. `motion.css` is the
+   CSS half of the Reveal/RevealLines components exported by @olum-video/ui —
+   importing those components without it renders them permanently invisible. */
 @import "@olum-video/ui/tokens.css";
+@import "@olum-video/ui/spectrum.css";
+@import "@olum-video/ui/motion.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Motion specific to the marketing site.
+
+   The reusable half (.reveal, .line-rise, .link-underline, the reduced-motion
+   override and the focus ring) lives in @olum-video/ui's motion.css, imported
+   above, because client-web uses it too. What is left here is only what the
+   landing page has: the pinned hero's stage copy, the marquee, the manifesto
+   sentence, the paper grain and the warm glow behind the particle cloud.
+
+   Same rules apply — `transform` and `opacity` only, never `top`, `height` or
+   `filter` in a loop, so the compositor can run these without laying out or
+   repainting while the hero canvas is already using a chunk of the frame.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  .magnetic {
+    /* Slower on the way back than the pointer moves on the way in, so the
+       control settles rather than snapping.
+
+       No `will-change`: it would hold a compositor layer on these buttons for
+       the whole session to speed up a transform that only runs while the
+       pointer is near them. Same reasoning as the reveals in motion.css. */
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .marquee-track {
+    animation-name: marquee;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 9%,
+      #000 91%,
+      transparent
+    );
+    mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+  }
+  /* Stops the strip when a visitor hovers it to read one — a moving target is
+     hostile to anyone trying to actually read the labels. */
+  .marquee-mask:hover .marquee-track,
+  .marquee-mask:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* Hero copy swapping between stages. Both the outgoing and incoming blocks
+     are in the DOM at once, stacked, so the hero's height cannot jump as the
+     text changes length. */
+  .stage-copy {
+    transition:
+      opacity 0.5s ease,
+      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .stage-copy[data-state="out-up"] {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0);
+  }
+  .stage-copy[data-state="out-down"] {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  .stage-copy[data-state="in"] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* One word of the manifesto sentence. The un-lit state is `--muted`, which
+     still clears AA against `--paper` — the sentence is readable the whole
+     way through, and lighting it is emphasis rather than a reveal. */
+  .manifesto-word {
+    color: rgb(var(--muted-rgb));
+    transition: color 0.45s ease;
+  }
+  .manifesto-word.is-lit {
+    color: rgb(var(--ink-rgb));
+  }
+
+  .scroll-cue::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, rgb(var(--ink-rgb) / 0.45), transparent);
+    animation: cue 2.4s ease-in-out infinite;
+  }
+
+  /* The "in our edit" progress bar in the product mock. Deliberately never
+     reaches 100% and restarts: it represents work in progress, and a bar that
+     completes and resets reads as a failed upload retrying. */
+  .edit-progress {
+    width: 20%;
+    animation: edit-progress 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /*
+     Gradient headline type.
+
+     WHY THIS IS A CLASS AND NOT THREE UTILITIES
+     -------------------------------------------
+     It used to be `bg-spectrum-text bg-clip-text text-transparent`. That
+     combination has a failure mode with no warning and no recovery: the text
+     colour is set to transparent by one utility and the thing meant to show
+     through it comes from another. If the background does not arrive — a
+     Tailwind key that was never generated, a browser without
+     `background-clip: text`, a stale build — you do not get ugly text, you get
+     NO text. A headline silently disappears and the page still "works".
+
+     That is exactly what happened here: the utility was missing from the
+     compiled CSS, `background-image` resolved to `none`, and the second line of
+     the hero rendered as an empty gap.
+
+     So the fallback comes first and is unconditional — the line is plain ink
+     until the gradient is proven available, and only then is the colour
+     dropped. There is no state in which these glyphs are invisible.
+  */
+  .text-spectrum {
+    color: rgb(var(--ink-rgb));
+  }
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .text-spectrum {
+      background-image: var(--spectrum-text);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+  }
+
+  /* The showcase player's scrubber.
+
+     A real <input type="range"> with its chrome removed, layered over the
+     three bars the player draws (track, buffered, played). Keeping the input
+     means drag, arrow-key stepping, touch and the accessibility tree all come
+     for free; only the paint is ours. The track itself is transparent because
+     those bars sit behind it.
+
+     The thumb stays hidden until the bar is hovered or focused — a dot parked
+     on a progress line is the difference between "a player" and "a form". */
+  .scrub {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    height: 16px;
+    cursor: pointer;
+  }
+  .scrub::-webkit-slider-runnable-track,
+  .scrub::-moz-range-track {
+    background: transparent;
+    height: 16px;
+  }
+  .scrub::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 13px;
+    width: 13px;
+    border-radius: 999px;
+    background: rgb(var(--paper-rgb));
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.55);
+    margin-top: 1.5px;
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.28s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .scrub::-moz-range-thumb {
+    height: 13px;
+    width: 13px;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(var(--paper-rgb));
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.55);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.28s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .scrub:hover::-webkit-slider-thumb,
+  .scrub:focus-visible::-webkit-slider-thumb {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .scrub:hover::-moz-range-thumb,
+  .scrub:focus-visible::-moz-range-thumb {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .scrub:focus {
+    outline: none;
+  }
+  .scrub:focus-visible {
+    outline: 2px solid rgb(var(--paper-rgb) / 0.8);
+    outline-offset: 4px;
+    border-radius: 999px;
+  }
+
+  /* Paper grain.
+
+     A single inline feTurbulence tile at very low opacity — it is what stops a
+     flat #f5f2ec background looking like an unfinished wireframe on a large
+     display.
+
+     NO `mix-blend-mode`. It had `multiply`, and that one property was the most
+     expensive thing on the page: a FIXED, full-viewport blended layer forces
+     the compositor to re-blend everything beneath it — the particle canvas,
+     three playing videos, the whole document — on every single scroll frame.
+     It is the classic cause of a page that animates fine but stutters the
+     moment you touch the wheel.
+
+     Over a warm near-white page, `multiply` at 4% and plain alpha at 3.5% are
+     not tellable apart. One of them is free. */
+  .grain::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Soft warm light behind the particle cloud. Pure CSS gradient rather than
+     something drawn into the canvas, so it does not cost a redraw per frame. */
+  .hero-glow {
+    background:
+      radial-gradient(
+        58% 52% at 50% 44%,
+        rgb(var(--accent-rgb) / 0.11) 0%,
+        rgb(var(--accent-rgb) / 0.03) 42%,
+        transparent 72%
+      ),
+      radial-gradient(90% 80% at 50% 50%, rgb(var(--warm-rgb) / 0.55) 0%, transparent 65%);
+  }
+}
+
+
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    /* Exactly half the track: the track is the item list twice over, so this
+       lands the second copy where the first one began. */
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes edit-progress {
+  0% {
+    width: 12%;
+    opacity: 0.4;
+  }
+  60% {
+    width: 68%;
+    opacity: 1;
+  }
+  100% {
+    width: 74%;
+    opacity: 0.4;
+  }
+}
+
+/* The "sound on" bars under a playing showcase tile. Height is animated on
+   three 2px bars, which is cheap; under reduced motion they simply stand
+   still at mid height and still read as "sound". */
+.sound-bar {
+  height: 55%;
+  animation: sound-bar 900ms ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-bar {
+    animation: none;
+  }
+}
+
+@keyframes sound-bar {
+  from {
+    height: 25%;
+  }
+  to {
+    height: 100%;
+  }
+}
+
+@keyframes cue {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  45% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  55% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+/*
+   No `scroll-behavior: smooth` here.
+
+   useSmoothScroll owns the scroll position while the wheel is in play, and a
+   native smooth anchor jump animating at the same time means two animations
+   writing `scrollY` on alternate frames — which looks exactly as bad as it
+   sounds. Anchor links are smoothed by the same momentum loop instead, and the
+   reduced-motion block above still forces `scroll-behavior: auto` for anyone
+   who has asked for it.
+*/

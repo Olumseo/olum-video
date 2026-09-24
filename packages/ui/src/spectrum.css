@@ -1,0 +1,164 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   The Olum Video spectrum.
+
+   These are OURS. Unlike tokens.css — which is a one-way copy of olum.ai's
+   palette and must not gain colours olum.ai does not have — this file is a
+   deliberate extension for the video product, kept separate so the boundary
+   stays obvious. Copying olum.ai's next palette change into tokens.css must
+   never mean reconciling it against these.
+
+   TWO TIERS, AND WHY THE SECOND ONE EXISTS
+   -----------------------------------------
+   A saturated hue that looks right as a 2px particle is nowhere near dark
+   enough to carry 11px type. The first version of this palette had one tier,
+   and an audit of every text node on the home page came back with 53 contrast
+   failures — labels at 2.7:1, a teal pull-quote at 3.4:1, step numbers at 3.0:1.
+   All of them looked "designed" and none of them were readable.
+
+   So each hue exists twice:
+
+     BRIGHT (--flare, --amber, …) is for things with no glyphs in them:
+     particles, gradient washes, rules, dots, glows. It is allowed to be as
+     loud as it likes.
+
+     TEXT (--flare-ink, --amber-ink, …) is the same hue scaled toward black
+     until it clears 4.6:1 against **--warm**, the DARKEST light surface on the
+     site — not against --paper, the lightest.
+
+     That distinction matters and the first version got it wrong. Fitting to
+     paper produced a muted grey that measured a comfortable 4.68 there and
+     4.4996 on the cream stats band — a failure by four ten-thousandths, which
+     is both genuinely below the line and completely invisible to review by eye.
+     A colour is only safe if it is safe on the worst background it will ever
+     land on, so every value below is fitted to `--warm` and therefore holds on
+     paper, cream and warm alike. The three measured ratios are recorded beside
+     each one.
+
+   The rule is simple and absolute: **if it has letters in it, use the -ink
+   token.** indigo and violet are dark enough already and so are their own
+   text tier — they are aliased rather than duplicated so nobody has to
+   remember which of the five is the exception.
+
+   A COROLLARY THAT IS EASY TO MISS
+   ---------------------------------
+   Never put an opacity modifier on a text token. `text-muted/80` looks like a
+   harmless way to say "a bit quieter" and it is really a way to say "undo the
+   contrast work": it took a measured 5.35:1 down to 3.54:1 in one place here.
+   Every one of these values is tuned at full strength, so if something needs
+   to be quieter it needs a different token, not a fraction of this one.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Bright: graphics only ─────────────────────────────────────────────── */
+  /* Channels, for the Tailwind preset — same rule as tokens.css. Storing a hex
+     here instead would make every `/opacity` variant render transparent. */
+  --flare-rgb: 255 93 59; /* 2.7:1 on paper  — never type */
+  --amber-rgb: 237 161 58; /* 1.9:1 on paper  — never type */
+  --teal-rgb: 20 147 140; /* 3.4:1 on paper  — never type */
+  --indigo-rgb: 70 87 216; /* 5.2:1 on paper  — safe either way */
+  --violet-rgb: 124 77 214; /* 4.8:1 on paper  — safe either way */
+
+  /* ── Text: 4.6:1 or better on --warm, so safe on every light surface ──── */
+  --flare-ink-rgb: 173 63 40; /* paper 5.34 · cream 4.92 · warm 4.62 */
+  --amber-ink-rgb: 133 90 32; /* paper 5.40 · cream 4.98 · warm 4.67 */
+  --teal-ink-rgb: 15 110 105; /* paper 5.44 · cream 5.01 · warm 4.71 */
+  --indigo-ink-rgb: 69 85 212; /* paper 5.37 · cream 4.94 · warm 4.64 */
+  --violet-ink-rgb: 117 72 201; /* paper 5.33 · cream 4.91 · warm 4.61 */
+  --accent-ink-rgb: 137 87 45; /* paper 5.42 · cream 5.00 · warm 4.70 */
+
+  /* Status hues need a text tier too, and for a sharper reason than the rest:
+     a status badge sets its own colour at 10% as its BACKGROUND, so the label
+     sits on a tinted version of itself. olum.ai's --success measured 4.13 on
+     that tint and --danger 3.68 — both below the line on the one component
+     whose entire job is to be read at a glance. */
+  --success-ink-rgb: 41 112 73; /* own tint 4.72 · paper 5.36 · warm 4.64 */
+  --danger-ink-rgb: 175 58 58; /* own tint 4.73 · paper 5.39 · warm 4.66 */
+
+  /* ── Secondary text ────────────────────────────────────────────────────── */
+  /*
+     A deliberate override of tokens.css, and the only one in this file.
+
+     olum.ai's --muted is `154 148 136`, which measures 2.7:1 against its own
+     paper. That is not a near miss — it is below the 3:1 floor for LARGE text,
+     let alone the 4.5:1 body text needs, and --muted carries most of the words
+     on this site. Inheriting it verbatim would mean shipping a site whose
+     secondary copy cannot be read in daylight.
+
+     tokens.css stays an untouched copy; the correction lives here, next to the
+     measurements that justify it. Same hue, scaled until it clears 4.6 on the
+     darkest surface it is ever set on rather than the lightest.
+  */
+  --muted-rgb: 103 99 91; /* paper 5.35 · cream 4.93 · warm 4.63
+                             (olum.ai's own value is 154 148 136, at 2.70) */
+
+  /* Ready-made, for hand-written CSS. */
+  --flare: rgb(var(--flare-rgb));
+  --amber: rgb(var(--amber-rgb));
+  --teal: rgb(var(--teal-rgb));
+  --indigo: rgb(var(--indigo-rgb));
+  --violet: rgb(var(--violet-rgb));
+
+  /*
+     The bright sweep, warm to cool. One definition so every gradient on the
+     site runs the same direction through the same stops — a second,
+     hand-rolled gradient elsewhere is how a palette starts looking accidental.
+
+     GRAPHICS ONLY. Clipping this to text puts amber at 1.9:1 through the
+     middle of a headline, which is exactly the washed-out look it produced.
+  */
+  --spectrum: linear-gradient(
+    90deg,
+    var(--flare) 0%,
+    var(--amber) 26%,
+    var(--accent) 45%,
+    var(--teal) 68%,
+    var(--indigo) 86%,
+    var(--violet) 100%
+  );
+
+  /* The same sweep turned through 90 degrees. Tailwind's `bg-gradient-to-b`
+     cannot re-aim an existing background image — it replaces it with a
+     from/to gradient that has no stops, which renders as nothing at all. So
+     the vertical run is its own token rather than a modifier. */
+  --spectrum-v: linear-gradient(
+    180deg,
+    var(--flare) 0%,
+    var(--amber) 26%,
+    var(--accent) 45%,
+    var(--teal) 68%,
+    var(--indigo) 86%,
+    var(--violet) 100%
+  );
+
+  /*
+     The text sweep — the -ink tier, same order.
+
+     This is what `bg-clip-text` headlines use. Every stop clears 4.6:1, so the
+     line is legible end to end instead of fading out through its middle. It
+     also simply looks better: deep jewel tones read as expensive where the
+     bright sweep reads as a highlighter.
+  */
+  --spectrum-text: linear-gradient(
+    100deg,
+    rgb(var(--flare-ink-rgb)) 0%,
+    rgb(var(--accent-ink-rgb)) 24%,
+    rgb(var(--amber-ink-rgb)) 38%,
+    rgb(var(--teal-ink-rgb)) 62%,
+    rgb(var(--indigo-ink-rgb)) 84%,
+    rgb(var(--violet-ink-rgb)) 100%
+  );
+
+  /* ── The dark panel ────────────────────────────────────────────────────── */
+  /*
+     The video showcase is the one near-black surface on the site and it needs
+     its own foreground scale. Pure --paper on --panel is 17:1 and vibrates at
+     panel scale; the values below are measured against --panel, not guessed,
+     and none of them is allowed below the 4.5:1 line either.
+  */
+  --panel-rgb: 16 15 14;
+  --panel: rgb(var(--panel-rgb));
+  --panel-soft: rgb(26 24 22);
+  --on-panel: rgb(245 242 236 / 0.94); /* 16.2:1 */
+  --on-panel-muted: rgb(245 242 236 / 0.72); /* 8.9:1  — body copy */
+  --on-panel-faint: rgb(245 242 236 / 0.58); /* 5.5:1  — smallest labels */
+}
