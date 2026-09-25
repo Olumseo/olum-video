@@ -42,7 +42,9 @@ const HYSTERESIS = 0.02;
 const EXIT_START = 0.9;
 
 const CTA_PRIMARY = "/get-started";
-const CTA_SECONDARY = "/video/welcome/pricing";
+// A plain href (a full page load), so it carries the base itself: /video/welcome/
+// on olum.ai, / on Vercel.
+const CTA_SECONDARY = `${import.meta.env.BASE_URL}pricing`;
 
 export function Hero() {
   const reduced = useReducedMotion();

@@ -1,17 +1,22 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// `base` is the URL prefix this app is served from in production.
+// `base` is the URL prefix this app is served from.
 //
-// Vite writes absolute asset URLs into index.html. Without a base, the HTML
-// asks for "/assets/index-<hash>.js" — meaning the ROOT of olum.ai, which is
-// the main SPA's asset folder, not ours. The page would load and then fail to
-// fetch its own JavaScript. Setting base makes it request
-// "/video/welcome/" + "assets/..." instead, which is where the files actually are.
+// On olum.ai it lives under /video/welcome/ (olum.ai's nginx proxies that path
+// to this app's container). Vite writes absolute asset URLs into index.html, so
+// without that base the HTML would ask for "/assets/index-<hash>.js" — the ROOT
+// of olum.ai, which is the main SPA's asset folder, not ours.
 //
-// This value must match the nginx location block AND the router basename.
+// On Vercel it is its own site, served from the domain root, so the base is
+// "/". Vercel sets VERCEL=1 during its builds. VITE_BASE overrides both.
+//
+// Everything else follows automatically: the router's basename, asset and media
+// URLs, and the email link's return address all come from import.meta.env.BASE_URL.
+const base = process.env.VITE_BASE ?? (process.env.VERCEL ? "/" : "/video/welcome/");
+
 export default defineConfig({
-  base: "/video/welcome/",
+  base,
   plugins: [react()],
   server: {
     port: 5202,
