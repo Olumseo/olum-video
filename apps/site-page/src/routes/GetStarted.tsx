@@ -16,20 +16,57 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Reveal, RevealLines } from "@olum-video/ui";
+import {
+  getCountries,
+  getCountryCallingCode,
+  getExampleNumber,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from "libphonenumber-js/min";
+import examples from "libphonenumber-js/mobile/examples";
 
 const API = "/api/v1/video/public/signups";
 
-/** Country codes offered first. Anything else can be typed with its own +. */
-const COUNTRIES = [
-  { code: "+91", name: "India" },
-  { code: "+1", name: "US / Canada" },
-  { code: "+44", name: "UK" },
-  { code: "+971", name: "UAE" },
-  { code: "+65", name: "Singapore" },
-  { code: "+61", name: "Australia" },
-];
+/**
+ * Every country, worldwide.
+ *
+ * The codes and the rules for what a valid number looks like come from
+ * libphonenumber-js — Google's libphonenumber metadata, the same data Android
+ * uses to format numbers — so nothing here is a hand-kept list that falls out
+ * of date. Names come from the browser's own `Intl.DisplayNames`, in the
+ * visitor's language. Sorted by name; opens on India (see defaultCountry).
+ */
+const regionNames = new Intl.DisplayNames([navigator.language, "en"], { type: "region" });
+
+const COUNTRIES = getCountries()
+  .map((iso) => ({
+    iso,
+    dial: `+${getCountryCallingCode(iso)}`,
+    name: regionNames.of(iso) ?? iso,
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+/**
+ * India, always — the main market.
+ *
+ * NOT guessed from the browser's language: most browsers everywhere report
+ * "en-US", and a guess that lands on the wrong country is worse than none —
+ * an Indian number typed under +44 is still a VALID UK number, so it passes
+ * every check and texts the code to a stranger's phone. Anyone elsewhere picks
+ * their country, which they can see right beside the number.
+ */
+function defaultCountry(): CountryCode {
+  return "IN";
+}
+
+/** The plans, as the pricing page names them. "" is "not sure yet". */
+const PLANS = [
+  { id: "premium_video", name: "Premium Video" },
+  { id: "ultimate", name: "Ultimate" },
+] as const;
+type PlanChoice = "" | (typeof PLANS)[number]["id"];
 
 type Started = {
   id: string;
@@ -196,9 +233,15 @@ function Problem({ text }: { text: string | null }) {
 function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [country, setCountry] = useState("+91");
+  const [country, setCountry] = useState<CountryCode>(defaultCountry);
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
+  // Arrives from the pricing page's "Choose …" buttons; editable here.
+  const [params] = useSearchParams();
+  const [plan, setPlan] = useState<PlanChoice>(() => {
+    const p = params.get("plan");
+    return PLANS.some((x) => x.id === p) ? (p as PlanChoice) : "";
+  });
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -207,10 +250,23 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
     setProblem(null);
     setBusy(true);
     try {
-      // A number typed with its own "+" keeps it; otherwise the picked code
-      // goes in front. Never a guess beyond that — see Normalize on the server.
-      const full = phone.trim().startsWith("+") ? phone.trim() : `${country}${phone}`;
-      const s = await post<Started>(API, { name, email, phone: full, note });
+      // A number typed with its own "+" is read as international; otherwise
+      // it is read as a number in the picked country. Checked against that
+      // country's real numbering rules here, so a typo is caught before an
+      // SMS is spent on it — the server still checks the result either way.
+      const typed = phone.trim();
+      const parsed = typed.startsWith("+")
+        ? parsePhoneNumberFromString(typed)
+        : parsePhoneNumberFromString(typed, country);
+      if (!parsed?.isValid()) {
+        const where = COUNTRIES.find((c) => c.iso === (parsed?.country ?? country))?.name;
+        throw new Error(
+          where
+            ? `That doesn't look like a valid phone number in ${where}.`
+            : "That doesn't look like a valid phone number.",
+        );
+      }
+      const s = await post<Started>(API, { name, email, phone: parsed.number, note, plan });
       onStarted(s, name.trim().split(/\s+/)[0] ?? "");
     } catch (err) {
       setProblem(err instanceof Error ? err.message : "Something went wrong.");
@@ -221,6 +277,20 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
 
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
+      <Field label="Plan" hint="We'll contact you and fix the price according to your needs.">
+        <select
+          value={plan}
+          onChange={(e) => setPlan(e.target.value as PlanChoice)}
+          className={inputClass}
+        >
+          {PLANS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+          <option value="">Not sure yet</option>
+        </select>
+      </Field>
       <Field label="Your name">
         <input
           className={inputClass}
@@ -244,15 +314,19 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
       </Field>
       <Field label="Phone" hint="We'll text a code here, and call this number to get you started.">
         <div className="mt-1.5 flex gap-2">
+          {/* Native <select>: every phone and screen reader already knows how
+              to operate it, and typing a letter jumps to that country. The
+              code leads each option so it stays visible when the closed box
+              truncates a long name. */}
           <select
-            aria-label="Country code"
+            aria-label="Country"
             value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="rounded-[12px] border border-subtle bg-paper px-3 py-3 text-[15px] text-ink focus:border-ink focus:outline-none"
+            onChange={(e) => setCountry(e.target.value as CountryCode)}
+            className="w-[8.5rem] shrink-0 rounded-[12px] border border-subtle bg-paper px-3 py-3 text-[15px] text-ink focus:border-ink focus:outline-none sm:w-[10rem]"
           >
             {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} {c.name}
+              <option key={c.iso} value={c.iso}>
+                {c.dial} {c.name}
               </option>
             ))}
           </select>
@@ -263,7 +337,8 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel-national"
-            placeholder="98765 43210"
+            // A real-shaped mobile number for the picked country.
+            placeholder={getExampleNumber(country, examples)?.formatNational() ?? ""}
             required
           />
         </div>

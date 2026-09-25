@@ -3,8 +3,15 @@ import { Reveal, RevealLines } from "@olum-video/ui";
 
 import { Annotation, Sparkle, StepBadge } from "../components/Marks";
 
+/**
+ * No prices on this page, on purpose: what a client needs varies (how many
+ * videos, how much editing, which channels), so the team sets the price on a
+ * call. Each plan is the starting point for that conversation, and its button
+ * carries the choice into the sign-up form.
+ */
 const PLANS = [
   {
+    id: "premium_video",
     name: "Premium Video",
     tagline: "The video product on its own.",
     points: [
@@ -16,6 +23,7 @@ const PLANS = [
     featured: false,
   },
   {
+    id: "ultimate",
     name: "Ultimate",
     tagline: "Everything olum.ai does, plus video.",
     points: [
@@ -26,6 +34,13 @@ const PLANS = [
     ],
     featured: true,
   },
+];
+
+/** How buying works, since there is no checkout. */
+const HOW = [
+  ["Select a plan", "Pick the one closest to what you need."],
+  ["Fill in the form", "Your name, email and phone — verified with two quick codes."],
+  ["We contact you", "Our team calls and fixes the price according to your needs."],
 ];
 
 /**
@@ -44,16 +59,30 @@ export default function Pricing() {
       <RevealLines
         as="h1"
         className="mt-6 font-serif text-[clamp(2.2rem,5.5vw,4rem)] leading-[1.04] tracking-tight"
-        lines={[
-          "Add video to",
-          <span className="text-spectrum">the account you have.</span>,
-        ]}
+        lines={["A price that fits", <span className="text-spectrum">what you need.</span>]}
       />
       <Reveal delay={160}>
         <p className="mt-6 max-w-readable text-[15px] leading-relaxed text-muted">
-          Already on olum.ai? Nothing you have today changes — video is an addition to your plan,
-          not a migration.
+          Select a plan and fill in the form. We&rsquo;ll contact you and fix the price according to
+          your needs. Already on olum.ai? Video is an addition to your plan, not a migration.
         </p>
+      </Reveal>
+
+      <Reveal delay={220}>
+        <ol className="mt-12 grid gap-4 sm:grid-cols-3">
+          {HOW.map(([title, body], i) => (
+            <li
+              key={title}
+              className="flex gap-4 rounded-card border border-subtle bg-paper/70 px-5 py-4"
+            >
+              <StepBadge index={String(i + 1).padStart(2, "0")} />
+              <div>
+                <p className="text-[15px] text-ink">{title}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </Reveal>
 
       <div className="mt-16 grid gap-5 lg:grid-cols-2">
@@ -86,6 +115,12 @@ export default function Pricing() {
                 )}
               </div>
               <p className="mt-3 text-sm text-muted">{plan.tagline}</p>
+              <p className="mt-5 font-display text-[22px] tracking-tight text-ink">
+                Priced to your needs
+                <span className="mt-1 block font-sans text-[13px] tracking-normal text-muted">
+                  We set it with you on a call.
+                </span>
+              </p>
 
               <ul className="mt-8 space-y-3 border-t border-subtle pt-8">
                 {plan.points.map((point) => (
@@ -107,14 +142,14 @@ export default function Pricing() {
                   a margin here would fight `mt-auto`. */}
               <div className="mt-auto pt-10">
                 <Link
-                  to="/get-started"
+                  to={`/get-started?plan=${plan.id}`}
                   className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm transition-colors ${
                     plan.featured
                       ? "bg-ink text-paper hover:bg-accent-2"
                       : "border border-subtle hover:bg-cream"
                   }`}
                 >
-                  Get started
+                  Choose {plan.name}
                   <span aria-hidden>→</span>
                 </Link>
               </div>
@@ -130,7 +165,7 @@ export default function Pricing() {
             quality problems, mistakes on our side — never count against your two.
           </p>
           <Annotation arrow="up-left" className="hidden items-end text-right lg:flex">
-            No setup fee. Cancel whenever.
+            Not sure which? Pick either — we&rsquo;ll sort it out on the call.
           </Annotation>
         </div>
       </Reveal>

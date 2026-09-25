@@ -138,7 +138,10 @@ export default function Shell({
             <Link to="/get-started" className="link-underline text-muted hover:text-ink">
               Get started
             </Link>
-            <a href="/" className="link-underline text-muted hover:text-ink">
+            {/* The live olum.ai site, absolutely. A bare "/" only worked when
+                this app happened to be served under olum.ai — locally and on
+                any preview domain it went nowhere useful. */}
+            <a href="https://olum.ai" className="link-underline text-muted hover:text-ink">
               olum.ai
             </a>
           </div>
