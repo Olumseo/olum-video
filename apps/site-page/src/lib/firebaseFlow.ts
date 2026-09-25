@@ -5,24 +5,67 @@
  * Auth is a sizeable library, and only a visitor who actually starts signing
  * up should download it — not everyone reading the home page.
  *
- * Each proof ends with signOut(). We only want the ID token that proves the
- * phone or email; keeping a Firebase session in the visitor's browser would
- * be a login to olum.ai's Firebase project they never asked for.
+ * EACH PROOF IS THROWN AWAY AFTER USE
+ * -----------------------------------
+ * Proving a phone or an email with Firebase signs the visitor in, and signing
+ * in with a phone or email Firebase has not seen CREATES a Firebase user.
+ * olum.ai signs its users up in the same Firebase project — with
+ * createUserWithEmailAndPassword, and linkWithPhoneNumber for the mobile
+ * step — and both fail with "already in use" when another Firebase user holds
+ * that email or number. So a user this form created must not outlive the form:
+ * discard() deletes it — but ONLY a user this flow just created
+ * (isNewUser). If the phone or email already belongs to an olum.ai account,
+ * that account is left exactly as it was.
+ *
+ * Call discard() AFTER video-service has the token: the Firebase emulator
+ * checks the user still exists when a token is verified.
  */
 
 import {
   RecaptchaVerifier,
+  deleteUser,
+  getAdditionalUserInfo,
   isSignInWithEmailLink,
   sendSignInLinkToEmail,
   signInWithEmailLink,
   signInWithPhoneNumber,
   signOut,
   type ConfirmationResult,
+  type UserCredential,
 } from "firebase/auth";
 
 import { firebaseAuth, firebaseEmulator } from "./firebase";
 
 export { firebaseEmulator };
+
+/** An ID token proving a phone or an email, and how to clean up after it. */
+export type Proof = {
+  token: string;
+  /** Delete the Firebase user if this flow created it, then sign out. Never throws. */
+  discard: () => Promise<void>;
+};
+
+async function proofFrom(cred: UserCredential): Promise<Proof> {
+  const token = await cred.user.getIdToken();
+  const createdHere = getAdditionalUserInfo(cred)?.isNewUser === true;
+  return {
+    token,
+    discard: async () => {
+      if (createdHere) {
+        try {
+          await deleteUser(cred.user);
+        } catch {
+          // Best effort: e.g. user deletion switched off in the project.
+        }
+      }
+      try {
+        await signOut(firebaseAuth());
+      } catch {
+        /* in-memory only — nothing to clean */
+      }
+    },
+  };
+}
 
 let verifier: RecaptchaVerifier | null = null;
 
@@ -40,12 +83,9 @@ export async function sendPhoneCode(phone: string, anchor: HTMLElement): Promise
   return signInWithPhoneNumber(auth, phone, verifier);
 }
 
-/** Checks the typed code; returns the ID token proving the phone. */
-export async function confirmPhoneCode(confirmation: ConfirmationResult, code: string): Promise<string> {
-  const cred = await confirmation.confirm(code);
-  const token = await cred.user.getIdToken();
-  await signOut(firebaseAuth());
-  return token;
+/** Checks the typed code; returns the proof of the phone. */
+export async function confirmPhoneCode(confirmation: ConfirmationResult, code: string): Promise<Proof> {
+  return proofFrom(await confirmation.confirm(code));
 }
 
 /** Emails a sign-in link that brings the visitor back to `returnTo`. */
@@ -57,12 +97,9 @@ export function isEmailLink(href: string): boolean {
   return isSignInWithEmailLink(firebaseAuth(), href);
 }
 
-/** Completes the link; returns the ID token proving the email. */
-export async function confirmEmailLink(email: string, href: string): Promise<string> {
-  const cred = await signInWithEmailLink(firebaseAuth(), email, href);
-  const token = await cred.user.getIdToken();
-  await signOut(firebaseAuth());
-  return token;
+/** Completes the link; returns the proof of the email. */
+export async function confirmEmailLink(email: string, href: string): Promise<Proof> {
+  return proofFrom(await signInWithEmailLink(firebaseAuth(), email, href));
 }
 
 /** Firebase error codes, in words a visitor can act on. */

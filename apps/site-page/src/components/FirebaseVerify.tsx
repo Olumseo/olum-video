@@ -91,8 +91,15 @@ export function FirebaseVerify({
     setProblem(null);
     setBusy(true);
     try {
-      const token = await flow.current.confirmPhoneCode(confirmation.current, code);
-      const r = await post<Confirmed>(`${API}/${encodeURIComponent(id)}/confirm`, { id_token: token });
+      const proof = await flow.current.confirmPhoneCode(confirmation.current, code);
+      let r: Confirmed;
+      try {
+        r = await post<Confirmed>(`${API}/${encodeURIComponent(id)}/confirm`, { id_token: proof.token });
+      } finally {
+        // After video-service has the token, never before — and whether or
+        // not the request worked, so no throwaway Firebase user is left.
+        await proof.discard();
+      }
       if (r.status === "captured") {
         onDone(r.name ?? "");
         return;
