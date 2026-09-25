@@ -549,11 +549,17 @@ function EmailLinkLanding({ id, onDone }: { id: string; onDone: (name: string) =
     try {
       const href = window.location.href;
       if (!flow.isEmailLink(href)) throw new Error("This link isn't valid. Please start again.");
-      const token = await flow.confirmEmailLink(address.trim(), href);
-      const r = await post<{ status: string; name?: string }>(
-        `${API}/${encodeURIComponent(id)}/confirm`,
-        { id_token: token },
-      );
+      const proof = await flow.confirmEmailLink(address.trim(), href);
+      let r: { status: string; name?: string };
+      try {
+        r = await post<{ status: string; name?: string }>(
+          `${API}/${encodeURIComponent(id)}/confirm`,
+          { id_token: proof.token },
+        );
+      } finally {
+        // After video-service has the token — see Proof in lib/firebaseFlow.
+        await proof.discard();
+      }
       // Tidy the address bar: the link's one-time code is spent.
       window.history.replaceState(null, "", `${import.meta.env.BASE_URL}get-started`);
       try {
