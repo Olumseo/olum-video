@@ -121,17 +121,45 @@ export function FirebaseVerify({
   }
 
   // Waiting on the email link: ask video-service whether it has been opened.
+  //
+  // Polling goes through olum.ai's shared api-gateway, so it stays cheap:
+  // paused while this tab is hidden (the visitor is in their email app —
+  // coming back checks at once), and stopped for good once the sign-up has
+  // expired (410) or after 30 minutes, so an abandoned tab never polls forever.
   useEffect(() => {
     if (stage !== "email") return;
-    const timer = window.setInterval(async () => {
+    const startedAt = Date.now();
+    let stopped = false;
+    const stop = (message?: string) => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      if (message) setProblem(message);
+    };
+    const check = async () => {
+      if (stopped || document.hidden) return;
+      if (Date.now() - startedAt > 30 * 60 * 1000) {
+        stop("This sign-up has expired. Please start again.");
+        return;
+      }
       const res = await fetch(`${API}/${encodeURIComponent(id)}`).catch(() => null);
+      if (stopped) return;
+      if (res?.status === 410) {
+        stop("This sign-up has expired. Please start again.");
+        return;
+      }
       const st = res && res.ok ? ((await res.json()) as { done: boolean; name: string }) : null;
-      if (st?.done) {
-        window.clearInterval(timer);
+      if (st?.done && !stopped) {
+        stop();
         onDone(st.name);
       }
-    }, 3000);
-    return () => window.clearInterval(timer);
+    };
+    const onVisible = () => {
+      if (!document.hidden) void check();
+    };
+    const timer = window.setInterval(() => void check(), 3000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => stop();
   }, [stage, id, onDone]);
 
   async function resendEmail() {
