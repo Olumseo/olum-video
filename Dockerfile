@@ -32,6 +32,19 @@ COPY packages/eslint-config/package.json packages/eslint-config/
 RUN npm ci
 
 COPY . .
+
+# Firebase for the landing page's sign-up form (/video/welcome/get-started),
+# which proves the visitor's phone and email. The SAME project and values as
+# olum.ai's frontend (its VITE_FIREBASE_* build args). Vite bakes these into
+# the JavaScript at build time, so they must be build args, not runtime env.
+# They are public client identifiers, not secrets. Left empty, the form says
+# sign-up is not configured rather than breaking.
+ARG VITE_FIREBASE_API_KEY=""
+ARG VITE_FIREBASE_AUTH_DOMAIN=""
+ARG VITE_FIREBASE_PROJECT_ID=""
+ARG VITE_FIREBASE_APP_ID=""
+ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY     VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN     VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID     VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID
+
 RUN npm run build
 
 # ─── serve ───────────────────────────────────────────────────────────────────

@@ -21,7 +21,8 @@ export default defineConfig({
     // development only, which is a miserable bug to chase.
     proxy: {
       "/api": {
-        target: process.env.VITE_API_PROXY ?? "http://localhost:8000",
+        // video-service's `./dev.sh run` port; override with VITE_API_PROXY.
+        target: process.env.VITE_API_PROXY ?? "http://localhost:8098",
         changeOrigin: true,
       },
     },

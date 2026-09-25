@@ -18,6 +18,9 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Reveal, RevealLines } from "@olum-video/ui";
+
+import { FirebaseVerify } from "../components/FirebaseVerify";
+import { LINK_KEY } from "../lib/signupLink";
 import {
   getCountries,
   getCountryCallingCode,
@@ -61,15 +64,16 @@ function defaultCountry(): CountryCode {
   return "IN";
 }
 
-/** The plans, as the pricing page names them. "" is "not sure yet". */
-const PLANS = [
-  { id: "premium_video", name: "Premium Video" },
-  { id: "ultimate", name: "Ultimate" },
-] as const;
-type PlanChoice = "" | (typeof PLANS)[number]["id"];
+/** The plan ids the pricing page's "Choose …" buttons pass as ?plan=. */
+const PLAN_IDS = ["premium_video", "ultimate"];
 
 type Started = {
   id: string;
+  /** "firebase": prove phone + email through Firebase. "codes": our own codes. */
+  method: "firebase" | "codes";
+  /** Firebase only: the exact phone and email to prove. */
+  phone?: string;
+  email?: string;
   email_hint: string;
   phone_hint: string;
   resend_after_seconds: number;
@@ -83,17 +87,26 @@ async function post<T>(url: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => null);
   if (!res.ok) {
+    // No JSON body means our API never answered (it is down, or a proxy in
+    // front of it failed) — say so rather than a vague "something went wrong".
     throw new Error(
-      (data as { message?: string }).message ?? "Something went wrong. Please try again.",
+      (data as { message?: string } | null)?.message ??
+        "We couldn't reach our server. Please try again in a moment.",
     );
   }
   return data as T;
 }
 
 export default function GetStarted() {
-  const [step, setStep] = useState<"details" | "codes" | "done">("details");
+  // Opened from the emailed Firebase link? Then this visit only finishes the
+  // email half — see EmailLinkLanding.
+  const [landing] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    return q.has("signup") && q.has("oobCode") ? q.get("signup") : null;
+  });
+  const [step, setStep] = useState<"details" | "codes" | "done">(landing ? "codes" : "details");
   const [started, setStarted] = useState<Started | null>(null);
   const [firstName, setFirstName] = useState("");
 
@@ -124,7 +137,7 @@ export default function GetStarted() {
           />
           <Reveal delay={200}>
             <p className="mt-6 max-w-readable text-[15px] leading-relaxed text-muted">
-              Leave your details and confirm them with two quick codes. Someone from our team will
+              Leave your details and confirm them with two quick checks. Someone from our team will
               contact you to set up your account and book the one recording your AI clone is built
               from.
             </p>
@@ -133,7 +146,7 @@ export default function GetStarted() {
             <ol className="mt-10 space-y-5">
               {[
                 ["Your details", "Name, email and phone — nothing else."],
-                ["Two codes", "One by email, one by text, so we know it's really you."],
+                ["Two quick checks", "A code by text and a confirmation by email, so we know it's really you."],
                 ["We call you", "A person from our team, not a bot, to get you started."],
               ].map(([title, body], i) => (
                 <li key={title} className="flex gap-4">
@@ -165,7 +178,30 @@ export default function GetStarted() {
                 }}
               />
             )}
-            {step === "codes" && started && (
+            {step === "codes" && landing && (
+              <EmailLinkLanding
+                id={landing}
+                onDone={(name) => {
+                  setFirstName(name);
+                  setStep("done");
+                }}
+              />
+            )}
+            {step === "codes" && started?.method === "firebase" && (
+              <FirebaseVerify
+                id={started.id}
+                phone={started.phone ?? ""}
+                email={started.email ?? ""}
+                phoneHint={started.phone_hint}
+                emailHint={started.email_hint}
+                onBack={() => setStep("details")}
+                onDone={(name) => {
+                  setFirstName(name || firstName);
+                  setStep("done");
+                }}
+              />
+            )}
+            {step === "codes" && started && started.method !== "firebase" && (
               <CodesForm
                 started={started}
                 onResent={setStarted}
@@ -236,12 +272,11 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
   const [country, setCountry] = useState<CountryCode>(defaultCountry);
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
-  // Arrives from the pricing page's "Choose …" buttons; editable here.
+  // Not asked on the form: the price is agreed on the call. When the visitor
+  // came from a pricing page "Choose …" button, that plan is passed along
+  // quietly so the team knows what caught their eye.
   const [params] = useSearchParams();
-  const [plan, setPlan] = useState<PlanChoice>(() => {
-    const p = params.get("plan");
-    return PLANS.some((x) => x.id === p) ? (p as PlanChoice) : "";
-  });
+  const plan = PLAN_IDS.includes(params.get("plan") ?? "") ? params.get("plan") : "";
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -277,20 +312,6 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
 
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
-      <Field label="Plan" hint="We'll contact you and fix the price according to your needs.">
-        <select
-          value={plan}
-          onChange={(e) => setPlan(e.target.value as PlanChoice)}
-          className={inputClass}
-        >
-          {PLANS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-          <option value="">Not sure yet</option>
-        </select>
-      </Field>
       <Field label="Your name">
         <input
           className={inputClass}
@@ -498,6 +519,102 @@ function CodesForm({
           {wait > 0 ? `Resend codes in ${wait}s` : "Resend codes"}
         </button>
       </div>
+    </form>
+  );
+}
+
+/**
+ * The visit that opens the emailed Firebase link: completes the email half,
+ * then either finishes the sign-up or says what is still left.
+ */
+function EmailLinkLanding({ id, onDone }: { id: string; onDone: (name: string) => void }) {
+  const [email, setEmail] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LINK_KEY) ?? "null") as
+        | { id: string; email: string }
+        | null;
+      return saved?.id === id ? saved.email : "";
+    } catch {
+      return "";
+    }
+  });
+  const [state, setState] = useState<"ask" | "working" | "half">(email ? "working" : "ask");
+  const [problem, setProblem] = useState<string | null>(null);
+  const began = useRef(false);
+
+  async function finish(address: string) {
+    setProblem(null);
+    setState("working");
+    const flow = await import("../lib/firebaseFlow");
+    try {
+      const href = window.location.href;
+      if (!flow.isEmailLink(href)) throw new Error("This link isn't valid. Please start again.");
+      const token = await flow.confirmEmailLink(address.trim(), href);
+      const r = await post<{ status: string; name?: string }>(
+        `${API}/${encodeURIComponent(id)}/confirm`,
+        { id_token: token },
+      );
+      // Tidy the address bar: the link's one-time code is spent.
+      window.history.replaceState(null, "", `${import.meta.env.BASE_URL}get-started`);
+      try {
+        localStorage.removeItem(LINK_KEY);
+      } catch {
+        /* nothing stored */
+      }
+      if (r.status === "captured") onDone(r.name ?? "");
+      else setState("half");
+    } catch (err) {
+      setProblem(flow.explain(err));
+      setState("ask");
+    }
+  }
+
+  useEffect(() => {
+    if (began.current || !email) return;
+    began.current = true;
+    void finish(email);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (state === "half") {
+    return (
+      <p role="status" className="text-[14.5px] leading-relaxed text-ink">
+        Email confirmed. Now finish the phone code on the page where you started — it will
+        complete by itself.
+      </p>
+    );
+  }
+  if (state === "working") {
+    return <p className="text-[14.5px] text-muted">Confirming your email…</p>;
+  }
+  return (
+    <form
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void finish(email);
+      }}
+    >
+      <p className="text-[14.5px] leading-relaxed text-muted">
+        Opened on a different device? Type the email you signed up with to finish.
+      </p>
+      <Field label="Email">
+        <input
+          className={inputClass}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+      </Field>
+      <Problem text={problem} />
+      <button
+        type="submit"
+        disabled={!email.trim()}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 disabled:opacity-40"
+      >
+        Confirm my email
+      </button>
     </form>
   );
 }
