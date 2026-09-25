@@ -16,23 +16,64 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Reveal, RevealLines } from "@olum-video/ui";
+
+import { FirebaseVerify } from "../components/FirebaseVerify";
+import { LINK_KEY } from "../lib/signupLink";
+import {
+  getCountries,
+  getCountryCallingCode,
+  getExampleNumber,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from "libphonenumber-js/min";
+import examples from "libphonenumber-js/mobile/examples";
 
 const API = "/api/v1/video/public/signups";
 
-/** Country codes offered first. Anything else can be typed with its own +. */
-const COUNTRIES = [
-  { code: "+91", name: "India" },
-  { code: "+1", name: "US / Canada" },
-  { code: "+44", name: "UK" },
-  { code: "+971", name: "UAE" },
-  { code: "+65", name: "Singapore" },
-  { code: "+61", name: "Australia" },
-];
+/**
+ * Every country, worldwide.
+ *
+ * The codes and the rules for what a valid number looks like come from
+ * libphonenumber-js — Google's libphonenumber metadata, the same data Android
+ * uses to format numbers — so nothing here is a hand-kept list that falls out
+ * of date. Names come from the browser's own `Intl.DisplayNames`, in the
+ * visitor's language. Sorted by name; opens on India (see defaultCountry).
+ */
+const regionNames = new Intl.DisplayNames([navigator.language, "en"], { type: "region" });
+
+const COUNTRIES = getCountries()
+  .map((iso) => ({
+    iso,
+    dial: `+${getCountryCallingCode(iso)}`,
+    name: regionNames.of(iso) ?? iso,
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+/**
+ * India, always — the main market.
+ *
+ * NOT guessed from the browser's language: most browsers everywhere report
+ * "en-US", and a guess that lands on the wrong country is worse than none —
+ * an Indian number typed under +44 is still a VALID UK number, so it passes
+ * every check and texts the code to a stranger's phone. Anyone elsewhere picks
+ * their country, which they can see right beside the number.
+ */
+function defaultCountry(): CountryCode {
+  return "IN";
+}
+
+/** The plan ids the pricing page's "Choose …" buttons pass as ?plan=. */
+const PLAN_IDS = ["premium_video", "ultimate"];
 
 type Started = {
   id: string;
+  /** "firebase": prove phone + email through Firebase. "codes": our own codes. */
+  method: "firebase" | "codes";
+  /** Firebase only: the exact phone and email to prove. */
+  phone?: string;
+  email?: string;
   email_hint: string;
   phone_hint: string;
   resend_after_seconds: number;
@@ -46,17 +87,26 @@ async function post<T>(url: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => null);
   if (!res.ok) {
+    // No JSON body means our API never answered (it is down, or a proxy in
+    // front of it failed) — say so rather than a vague "something went wrong".
     throw new Error(
-      (data as { message?: string }).message ?? "Something went wrong. Please try again.",
+      (data as { message?: string } | null)?.message ??
+        "We couldn't reach our server. Please try again in a moment.",
     );
   }
   return data as T;
 }
 
 export default function GetStarted() {
-  const [step, setStep] = useState<"details" | "codes" | "done">("details");
+  // Opened from the emailed Firebase link? Then this visit only finishes the
+  // email half — see EmailLinkLanding.
+  const [landing] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    return q.has("signup") && q.has("oobCode") ? q.get("signup") : null;
+  });
+  const [step, setStep] = useState<"details" | "codes" | "done">(landing ? "codes" : "details");
   const [started, setStarted] = useState<Started | null>(null);
   const [firstName, setFirstName] = useState("");
 
@@ -87,7 +137,7 @@ export default function GetStarted() {
           />
           <Reveal delay={200}>
             <p className="mt-6 max-w-readable text-[15px] leading-relaxed text-muted">
-              Leave your details and confirm them with two quick codes. Someone from our team will
+              Leave your details and confirm them with two quick checks. Someone from our team will
               contact you to set up your account and book the one recording your AI clone is built
               from.
             </p>
@@ -96,7 +146,7 @@ export default function GetStarted() {
             <ol className="mt-10 space-y-5">
               {[
                 ["Your details", "Name, email and phone — nothing else."],
-                ["Two codes", "One by email, one by text, so we know it's really you."],
+                ["Two quick checks", "A code by text and a confirmation by email, so we know it's really you."],
                 ["We call you", "A person from our team, not a bot, to get you started."],
               ].map(([title, body], i) => (
                 <li key={title} className="flex gap-4">
@@ -128,7 +178,30 @@ export default function GetStarted() {
                 }}
               />
             )}
-            {step === "codes" && started && (
+            {step === "codes" && landing && (
+              <EmailLinkLanding
+                id={landing}
+                onDone={(name) => {
+                  setFirstName(name);
+                  setStep("done");
+                }}
+              />
+            )}
+            {step === "codes" && started?.method === "firebase" && (
+              <FirebaseVerify
+                id={started.id}
+                phone={started.phone ?? ""}
+                email={started.email ?? ""}
+                phoneHint={started.phone_hint}
+                emailHint={started.email_hint}
+                onBack={() => setStep("details")}
+                onDone={(name) => {
+                  setFirstName(name || firstName);
+                  setStep("done");
+                }}
+              />
+            )}
+            {step === "codes" && started && started.method !== "firebase" && (
               <CodesForm
                 started={started}
                 onResent={setStarted}
@@ -196,9 +269,14 @@ function Problem({ text }: { text: string | null }) {
 function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [country, setCountry] = useState("+91");
+  const [country, setCountry] = useState<CountryCode>(defaultCountry);
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
+  // Not asked on the form: the price is agreed on the call. When the visitor
+  // came from a pricing page "Choose …" button, that plan is passed along
+  // quietly so the team knows what caught their eye.
+  const [params] = useSearchParams();
+  const plan = PLAN_IDS.includes(params.get("plan") ?? "") ? params.get("plan") : "";
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -207,10 +285,23 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
     setProblem(null);
     setBusy(true);
     try {
-      // A number typed with its own "+" keeps it; otherwise the picked code
-      // goes in front. Never a guess beyond that — see Normalize on the server.
-      const full = phone.trim().startsWith("+") ? phone.trim() : `${country}${phone}`;
-      const s = await post<Started>(API, { name, email, phone: full, note });
+      // A number typed with its own "+" is read as international; otherwise
+      // it is read as a number in the picked country. Checked against that
+      // country's real numbering rules here, so a typo is caught before an
+      // SMS is spent on it — the server still checks the result either way.
+      const typed = phone.trim();
+      const parsed = typed.startsWith("+")
+        ? parsePhoneNumberFromString(typed)
+        : parsePhoneNumberFromString(typed, country);
+      if (!parsed?.isValid()) {
+        const where = COUNTRIES.find((c) => c.iso === (parsed?.country ?? country))?.name;
+        throw new Error(
+          where
+            ? `That doesn't look like a valid phone number in ${where}.`
+            : "That doesn't look like a valid phone number.",
+        );
+      }
+      const s = await post<Started>(API, { name, email, phone: parsed.number, note, plan });
       onStarted(s, name.trim().split(/\s+/)[0] ?? "");
     } catch (err) {
       setProblem(err instanceof Error ? err.message : "Something went wrong.");
@@ -244,15 +335,19 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
       </Field>
       <Field label="Phone" hint="We'll text a code here, and call this number to get you started.">
         <div className="mt-1.5 flex gap-2">
+          {/* Native <select>: every phone and screen reader already knows how
+              to operate it, and typing a letter jumps to that country. The
+              code leads each option so it stays visible when the closed box
+              truncates a long name. */}
           <select
-            aria-label="Country code"
+            aria-label="Country"
             value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="rounded-[12px] border border-subtle bg-paper px-3 py-3 text-[15px] text-ink focus:border-ink focus:outline-none"
+            onChange={(e) => setCountry(e.target.value as CountryCode)}
+            className="w-[8.5rem] shrink-0 rounded-[12px] border border-subtle bg-paper px-3 py-3 text-[15px] text-ink focus:border-ink focus:outline-none sm:w-[10rem]"
           >
             {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} {c.name}
+              <option key={c.iso} value={c.iso}>
+                {c.dial} {c.name}
               </option>
             ))}
           </select>
@@ -263,7 +358,8 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel-national"
-            placeholder="98765 43210"
+            // A real-shaped mobile number for the picked country.
+            placeholder={getExampleNumber(country, examples)?.formatNational() ?? ""}
             required
           />
         </div>
@@ -423,6 +519,102 @@ function CodesForm({
           {wait > 0 ? `Resend codes in ${wait}s` : "Resend codes"}
         </button>
       </div>
+    </form>
+  );
+}
+
+/**
+ * The visit that opens the emailed Firebase link: completes the email half,
+ * then either finishes the sign-up or says what is still left.
+ */
+function EmailLinkLanding({ id, onDone }: { id: string; onDone: (name: string) => void }) {
+  const [email, setEmail] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LINK_KEY) ?? "null") as
+        | { id: string; email: string }
+        | null;
+      return saved?.id === id ? saved.email : "";
+    } catch {
+      return "";
+    }
+  });
+  const [state, setState] = useState<"ask" | "working" | "half">(email ? "working" : "ask");
+  const [problem, setProblem] = useState<string | null>(null);
+  const began = useRef(false);
+
+  async function finish(address: string) {
+    setProblem(null);
+    setState("working");
+    const flow = await import("../lib/firebaseFlow");
+    try {
+      const href = window.location.href;
+      if (!flow.isEmailLink(href)) throw new Error("This link isn't valid. Please start again.");
+      const token = await flow.confirmEmailLink(address.trim(), href);
+      const r = await post<{ status: string; name?: string }>(
+        `${API}/${encodeURIComponent(id)}/confirm`,
+        { id_token: token },
+      );
+      // Tidy the address bar: the link's one-time code is spent.
+      window.history.replaceState(null, "", `${import.meta.env.BASE_URL}get-started`);
+      try {
+        localStorage.removeItem(LINK_KEY);
+      } catch {
+        /* nothing stored */
+      }
+      if (r.status === "captured") onDone(r.name ?? "");
+      else setState("half");
+    } catch (err) {
+      setProblem(flow.explain(err));
+      setState("ask");
+    }
+  }
+
+  useEffect(() => {
+    if (began.current || !email) return;
+    began.current = true;
+    void finish(email);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (state === "half") {
+    return (
+      <p role="status" className="text-[14.5px] leading-relaxed text-ink">
+        Email confirmed. Now finish the phone code on the page where you started — it will
+        complete by itself.
+      </p>
+    );
+  }
+  if (state === "working") {
+    return <p className="text-[14.5px] text-muted">Confirming your email…</p>;
+  }
+  return (
+    <form
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void finish(email);
+      }}
+    >
+      <p className="text-[14.5px] leading-relaxed text-muted">
+        Opened on a different device? Type the email you signed up with to finish.
+      </p>
+      <Field label="Email">
+        <input
+          className={inputClass}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+      </Field>
+      <Problem text={problem} />
+      <button
+        type="submit"
+        disabled={!email.trim()}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 disabled:opacity-40"
+      >
+        Confirm my email
+      </button>
     </form>
   );
 }

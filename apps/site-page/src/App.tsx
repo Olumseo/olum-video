@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import Shell from "./routes/Shell";
@@ -6,7 +7,10 @@ import Home from "./routes/Home";
 import HowItWorks from "./routes/HowItWorks";
 import Results from "./routes/Results";
 import Pricing from "./routes/Pricing";
-import GetStarted from "./routes/GetStarted";
+// Loaded only when visited: the sign-up page carries the phone-number rules for
+// every country (and pulls in Firebase), which every other visitor would
+// otherwise download for nothing.
+const GetStarted = lazy(() => import("./routes/GetStarted"));
 
 // Results comes first: it is the page that answers "does this actually work",
 // which is the only question a visitor has before any of the others.
@@ -25,7 +29,14 @@ export default function App() {
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/pricing" element={<Pricing />} />
         {/* Where every "Get started" and "Create my AI clone" leads. */}
-        <Route path="/get-started" element={<GetStarted />} />
+        <Route
+          path="/get-started"
+          element={
+            <Suspense fallback={<div className="min-h-screen" />}>
+              <GetStarted />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Shell>

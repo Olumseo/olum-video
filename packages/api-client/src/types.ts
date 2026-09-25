@@ -423,6 +423,8 @@ export interface Lead {
   company: string | null;
   /** "What will your videos be about?" */
   note: string | null;
+  /** The plan picked on the pricing page; null = "not sure yet". */
+  plan: "premium_video" | "ultimate" | null;
   status: "new" | "contacted";
   /** On the staff list: the NAME of whoever called them. */
   contacted_by: string | null;

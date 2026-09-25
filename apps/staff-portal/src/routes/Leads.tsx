@@ -79,6 +79,14 @@ function LeadRow({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
           <p className="text-[15px] text-ink">
             {lead.name}
             {lead.company && <span className="text-muted"> · {lead.company}</span>}
+            {/* No price on the site: the plan is what the call starts from. */}
+            <span className="ml-2 rounded-full border border-subtle px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+              {lead.plan === "ultimate"
+                ? "Ultimate"
+                : lead.plan === "premium_video"
+                  ? "Premium Video"
+                  : "Plan: not sure"}
+            </span>
           </p>
           <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[12px]">
             <a href={`tel:${lead.phone}`} className="link-underline text-ink">

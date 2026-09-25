@@ -13,6 +13,8 @@
   "dependencies": {
     "@olum-video/api-client": "*",
     "@olum-video/ui": "*",
+    "firebase": "^12.19.0",
+    "libphonenumber-js": "^1.13.14",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2"
@@ -20,8 +22,8 @@
   "devDependencies": {
     "@olum-video/eslint-config": "*",
     "@olum-video/tsconfig": "*",
-    "@types/react": "^18.3.5",
     "@types/node": "^22.7.4",
+    "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
