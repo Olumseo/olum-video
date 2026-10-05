@@ -21,6 +21,7 @@ import { Reveal, RevealLines } from "@olum-video/ui";
 
 import { FirebaseVerify } from "../components/FirebaseVerify";
 import { LINK_KEY } from "../lib/signupLink";
+import { SIGNUPS_API } from "../lib/api";
 import {
   getCountries,
   getCountryCallingCode,
@@ -30,7 +31,7 @@ import {
 } from "libphonenumber-js/min";
 import examples from "libphonenumber-js/mobile/examples";
 
-const API = "/api/v1/video/public/signups";
+const API = SIGNUPS_API;
 
 /**
  * Every country, worldwide.

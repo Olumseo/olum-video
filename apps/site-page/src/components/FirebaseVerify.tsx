@@ -15,8 +15,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ConfirmationResult } from "firebase/auth";
 
 import { LINK_KEY } from "../lib/signupLink";
+import { SIGNUPS_API } from "../lib/api";
 
-const API = "/api/v1/video/public/signups";
+const API = SIGNUPS_API;
 
 type Flow = typeof import("../lib/firebaseFlow");
 
