@@ -143,7 +143,7 @@ export function HomeHero() {
                   to="/get-started"
                   className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 hover:shadow-[0_18px_40px_-20px_rgb(var(--ink-rgb)/0.55)]"
                 >
-                  Get Started
+                  Get started
                   <span aria-hidden>→</span>
                 </Link>
               </Magnetic>

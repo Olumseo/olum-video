@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Reveal, RevealLines } from "@olum-video/ui";
 
 import { FirebaseVerify } from "../components/FirebaseVerify";
@@ -269,7 +269,10 @@ function Problem({ text }: { text: string | null }) {
 
 function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string) => void }) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  // Arrives filled in when the visitor typed it into the home page's closing
+  // box — carried in router state, so it never appears in the URL.
+  const { state } = useLocation();
+  const [email, setEmail] = useState(() => (state as { email?: string } | null)?.email ?? "");
   const [country, setCountry] = useState<CountryCode>(defaultCountry);
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
