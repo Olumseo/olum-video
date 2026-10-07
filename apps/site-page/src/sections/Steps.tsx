@@ -19,6 +19,8 @@ import { ExplainerGrid, ExplainerHeading } from "../components/Explainer";
 import { PlatformMark } from "../components/PlatformMarks";
 import { PLATFORMS } from "../components/platforms";
 import { Annotation } from "../components/Marks";
+import { Cta } from "../components/Cta";
+import { Magnetic } from "../components/Magnetic";
 
 const base = import.meta.env.BASE_URL;
 
@@ -198,7 +200,7 @@ const STEPS = [
     index: "02",
     highlight: "Where the work happens",
     title: "Olum creates everything",
-    body: "Olum's AI agents find content ideas, research each topic, write scripts and hooks, create captions, generate your AI avatar videos and edit each one.",
+    body: "Agents find content ideas, research each topic, write scripts and hooks, create captions, generate your AI avatar videos and edit each one.",
     mock: <OutputMock />,
   },
   {
@@ -210,13 +212,13 @@ const STEPS = [
   {
     index: "04",
     title: "Olum tracks performance",
-    body: "Olum tracks views, watch time, engagement, and other performance data.",
+    body: "Views, watch time, engagement and other performance data — tracked for you.",
     mock: <TrackMock />,
   },
   {
     index: "05",
     title: "Olum improves future content",
-    body: "The agents use the performance data to improve the next topics, scripts, hooks, captions, and videos.",
+    body: "The agents use the data to improve the next topics, scripts, hooks, captions, and videos.",
     mock: <ImproveMock />,
   },
 ];
@@ -237,6 +239,19 @@ export function Steps() {
           <Annotation arrow="up-left" wide className="items-center text-center">
             Four of these five are not your job.
           </Annotation>
+        </div>
+      </Reveal>
+
+      <Reveal delay={260}>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Magnetic>
+            <Cta to="/get-started" arrow>
+              Send your first recording
+            </Cta>
+          </Magnetic>
+          <Cta to="#showcase" look="ghost">
+            Watch sample videos
+          </Cta>
         </div>
       </Reveal>
     </section>

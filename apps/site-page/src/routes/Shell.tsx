@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useScrolled } from "@olum-video/ui";
 
 import { useSmoothScroll } from "../motion/useSmoothScroll";
+import { Nudge, StickyBar } from "../components/Floating";
 
 /**
  * Page frame for the marketing site.
@@ -160,6 +161,15 @@ export default function Shell({
           </p>
         </div>
       </footer>
+
+      {/* The floating calls to action — everywhere except the sign-up form
+          itself, where they would point at the page you are already on. */}
+      {pathname !== "/get-started" && (
+        <>
+          <StickyBar />
+          <Nudge />
+        </>
+      )}
     </div>
   );
 }

@@ -79,6 +79,7 @@ export function ProofRow({
   outputs,
   outputTitle,
   outputNote,
+  outputAside,
   loud,
   onActivate,
 }: {
@@ -95,6 +96,8 @@ export function ProofRow({
   outputs: Clip[];
   outputTitle: string;
   outputNote: string;
+  /** Sits under the finished pair — the home page puts its call to action here. */
+  outputAside?: ReactNode;
   /** Id of the clip currently playing with sound, site-wide. */
   loud: string | null;
   onActivate: (id: string) => void;
@@ -162,6 +165,7 @@ export function ProofRow({
             />
           ))}
         </div>
+        {outputAside}
       </Reveal>
     </div>
   );
