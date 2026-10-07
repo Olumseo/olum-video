@@ -104,37 +104,23 @@ const MESSAGES = [
   },
 ];
 
-const OPEN_AFTER_MS = 6000;
+/**
+ * How long after landing the card opens. Just long enough for the page to
+ * paint first, so the card slides in rather than being there from frame one.
+ */
+const OPEN_ON_LAND_MS = 600;
 const ROTATE_MS = 9000;
 /** The card dips out for this long while its words change. */
 const SWAP_MS = 400;
-/** Closed with the ×, it stays closed for the rest of the visit. */
-const DISMISSED_KEY = "olumNudgeOff";
-
-function readDismissed() {
-  try {
-    return sessionStorage.getItem(DISMISSED_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeDismissed(off: boolean) {
-  try {
-    if (off) sessionStorage.setItem(DISMISSED_KEY, "1");
-    else sessionStorage.removeItem(DISMISSED_KEY);
-  } catch {
-    // Private mode or blocked storage: it simply comes back on the next page.
-  }
-}
 
 /**
  * The corner prompt.
  *
- * It opens on its own once, six seconds in, and turns through the messages
- * every nine. Hovering or focusing it holds the current one still — a card
- * that changes under the pointer is a card nobody can finish reading. The ×
- * closes it for the visit; the round button brings it back at any time.
+ * It opens as soon as the visitor lands — exactly as if they had pressed the
+ * round button — and turns through the messages every nine seconds. Hovering
+ * or focusing it holds the current one still: a card that changes under the
+ * pointer is a card nobody can finish reading. The × or Escape closes it; the
+ * round button brings it back at any time.
  */
 export function Nudge() {
   const near = useNearAsk();
@@ -142,7 +128,6 @@ export function Nudge() {
   nearRef.current = near;
 
   const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(readDismissed);
   const [index, setIndex] = useState(0);
   const [swapping, setSwapping] = useState(false);
   const [held, setHeld] = useState(false);
@@ -150,14 +135,13 @@ export function Nudge() {
   const visible = open && !swapping;
   const message = MESSAGES[index]!;
 
-  // The one unprompted appearance.
+  // Open on landing, unless the visitor arrived already at the page's own ask.
   useEffect(() => {
-    if (dismissed) return;
     const timer = window.setTimeout(() => {
       if (!nearRef.current) setOpen(true);
-    }, OPEN_AFTER_MS);
+    }, OPEN_ON_LAND_MS);
     return () => window.clearTimeout(timer);
-  }, [dismissed]);
+  }, []);
 
   // Reaching the page's own ask puts it away.
   useEffect(() => {
@@ -181,36 +165,24 @@ export function Nudge() {
     };
   }, [open, held]);
 
-  function close(byHand: boolean) {
+  function close() {
     setOpen(false);
     setHeld(false);
-    if (byHand) {
-      setDismissed(true);
-      writeDismissed(true);
-    }
   }
 
   // Escape closes it, as it would any panel that opened itself.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      setDismissed(true);
-      writeDismissed(true);
+      if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
   function toggle() {
-    if (open) {
-      close(true);
-      return;
-    }
-    setDismissed(false);
-    writeDismissed(false);
-    setOpen(true);
+    if (open) close();
+    else setOpen(true);
   }
 
   return (
@@ -236,7 +208,7 @@ export function Nudge() {
 
         <button
           type="button"
-          onClick={() => close(true)}
+          onClick={close}
           aria-label="Close"
           className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-cream text-muted transition-colors hover:bg-warm hover:text-ink"
         >
@@ -258,13 +230,13 @@ export function Nudge() {
           to={message.action.to}
           small
           className="mt-4 w-full justify-center"
-          onClick={() => close(false)}
+          onClick={close}
         >
           {message.action.label}
         </Cta>
         <Link
           to={message.aside.to}
-          onClick={() => close(false)}
+          onClick={close}
           className="mt-2.5 block text-center text-[12.5px] text-muted transition-colors hover:text-ink"
         >
           {message.aside.label}
