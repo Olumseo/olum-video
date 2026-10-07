@@ -385,7 +385,7 @@ function DetailsForm({ onStarted }: { onStarted: (s: Started, firstName: string)
         disabled={busy}
         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 disabled:opacity-50"
       >
-        {busy ? "Sending codes…" : "Send my codes"}
+        {busy ? "Submitting…" : "Submit"}
         {!busy && <span aria-hidden>→</span>}
       </button>
       <p className="text-center text-[12px] leading-relaxed text-muted">
@@ -507,7 +507,7 @@ function CodesForm({
         disabled={busy || emailCode.length !== 6 || phoneCode.length !== 6}
         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 disabled:opacity-40"
       >
-        {busy ? "Checking…" : "Confirm"}
+        {busy ? "Submitting…" : "Submit"}
       </button>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
@@ -623,7 +623,7 @@ function EmailLinkLanding({ id, onDone }: { id: string; onDone: (name: string) =
         disabled={!email.trim()}
         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-all duration-500 ease-luxe hover:bg-accent-2 disabled:opacity-40"
       >
-        Confirm my email
+        Submit
       </button>
     </form>
   );
